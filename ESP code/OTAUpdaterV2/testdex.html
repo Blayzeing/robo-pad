@@ -1,0 +1,44 @@
+<html>
+<head>
+  <!--<meta http-equiv='refresh' content='5'/>!-->
+  <title>ESP8266 Demo</title>
+  <style>
+    body { background-color: #cccccc; font-family: Arial, Helvetica, Sans-Serif; Color: #000088; }
+  </style>
+  <script>
+    var ledState = false;
+    var theInterval;
+    function init(){
+      console.log('init complete...');
+      var testSocket = new WebSocket("ws://192.168.4.1:81");
+      console.log('connection attempted...');
+      testSocket.onopen = function (event) {
+        console.log('Sending data...');
+        testSocket.send("WE'RE IN.");
+        // Shutdown commands.
+        document.getElementById("disconnectBtn").onclick=function(){
+          testSocket.close();
+          //clearInterval(theInterval);
+        };
+        //// Control commands.
+        //document.getElementById("LEDBtn").onclick=function(){
+        //  ledState = !ledState;
+        //}
+        console.log('setting interval...');
+        theInterval = setInterval(function(){console.log('sending data...'); testSocket.send("some data");},1000);
+      };
+    }
+    //function sendData(){
+    //  // Should be an ArrayBuffer
+    //  testSocet.send(ledState?"ledon":"ledoff");
+    //}
+    if(document.getElementById) window.onload=init;
+  </script>
+</head>
+<body>
+  <h1>This is the websocket page</h1>
+  <p>Bleh.</p>
+  <input id="disconnectBtn" type="button" value="Disconnect"/>
+  <input id="LEDBtn" type="button" value="LED"/>
+</body>
+</html>
