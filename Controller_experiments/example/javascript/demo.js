@@ -164,6 +164,7 @@ function onMouseOut (event)
 	//This is cheap and dirty; really they should stop generating all together.
 	Particles.startXpos = -255;
 	Particles.startYpos = 350;
+	console.log("beans");
 }
 // The function that fixes the canvas displaying over the div
 function checkHeight (event)
@@ -184,6 +185,8 @@ function init ()
 	// initialise img and the particle list and get the canvas and set up the context.
 	canvas = document.getElementById("jsGame");
 	context = canvas.getContext("2d");
+	txt = document.getElementById("words");
+	txt.innerHTML = "more eggs";
 	img = new Image();
 	var particleList = new Particles(1000);
 	
