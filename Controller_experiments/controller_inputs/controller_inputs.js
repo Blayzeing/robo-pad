@@ -99,6 +99,14 @@ function numberOfPressedButtons(index){
 	let axisThreshold = 0.1;
 	let gamepads = navigator.getGamepads();
 	let gp = gamepads[index];
+	if ((gamepads[index] === null)){
+		console.log("Controller at index " + index + " disconnected.");
+		return -1;
+	}
+	if ((!gamepads[index].connected)){
+		console.log("Controller at index " + index + " disconnected.");
+		return -1;
+	}
 	let count = 0;
 	for (let i = 0; i <= 15; i++) {
 		if(gp.buttons[i].pressed)	count++;

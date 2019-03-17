@@ -2,10 +2,10 @@
 
 #include <Servo.h>
 
-const int redLED = 3;
+const int redLED = 4;
 const int greenLED = 5;
-const int trig = 9;
-const int echo = 10;
+const int trig = 3;
+const int echo = 2;
 const int servo1Pin = 6;
 
 int brightness, angle1;
@@ -46,9 +46,9 @@ void loop() {
   }
   
   Serial.print(cm);
-  Serial.print("cm");
+  Serial.print("cm  ");
   //Serial.print(duration);
-  Serial.println();
+  Serial.println(duration);
 
   //dim the LED in comparison to the ultrasonic reading. 
   brightness = map(cm, 0, 400, 0, 255);
