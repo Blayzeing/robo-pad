@@ -6,33 +6,45 @@
     body { background-color: #cccccc; font-family: Arial, Helvetica, Sans-Serif; Color: #000088; }
   </style>
   <script>
-    var ledState = false;
-    var theInterval;
-    function init(){
-      console.log('init complete...');
-      var testSocket = new WebSocket("ws://192.168.4.1:81");
-      console.log('connection attempted...');
-      testSocket.onopen = function (event) {
-        console.log('Sending data...');
-        testSocket.send("WE'RE IN.");
-        // Shutdown commands.
-        document.getElementById("disconnectBtn").onclick=function(){
-          testSocket.close();
-          //clearInterval(theInterval);
-        };
-        //// Control commands.
-        //document.getElementById("LEDBtn").onclick=function(){
-        //  ledState = !ledState;
-        //}
-        console.log('setting interval...');
-        theInterval = setInterval(function(){console.log('sending data...'); testSocket.send("some data");},1000);
-      };
+var ledState = false;
+var theInterval;
+function init(){
+  console.log('init complete...');
+  var testSocket = new WebSocket('ws://192.168.4.1:81');
+  console.log('connection attempted...');
+
+  // The data ArrayBuffer
+  var data = new ArrayBuffer(2);// 2 bytes, one for each wheel drive
+  var int8View = new Int8Array(data);// View it
+  int8View[0] = 0;
+  int8View[1] = 255;
+
+  testSocket.onopen = function (event) {
+    console.log('Sending data...');
+    testSocket.send('WE ARE IN.');
+    // Shutdown commands.
+    document.getElementById('disconnectBtn').onclick=function(){
+      testSocket.close();
+      //clearInterval(theInterval);
+    };
+    // Control commands.
+    document.getElementById('LEDBtn').onclick=function(){
+      ledState = !ledState;
+    };
+    document.getElementById('bufferBtn').onclick=function(){
+      testSocket.send(data);
+    };
+    console.log('setting interval...');
+    theInterval = setInterval(function(){console.log('sending data...'); sendData();},500);
+    function sendData(){
+      // Should be an ArrayBuffer
+      testSocket.send(ledState?'ledon':'ledoff');
+      //view[0] = ledState?1:0;
+      //testSocket.send(view);
     }
-    //function sendData(){
-    //  // Should be an ArrayBuffer
-    //  testSocet.send(ledState?"ledon":"ledoff");
-    //}
-    if(document.getElementById) window.onload=init;
+  };
+}
+if(document.getElementById) window.onload=init;
   </script>
 </head>
 <body>
@@ -40,5 +52,6 @@
   <p>Bleh.</p>
   <input id="disconnectBtn" type="button" value="Disconnect"/>
   <input id="LEDBtn" type="button" value="LED"/>
+  <input id="bufferBtn" type="button" value="Send Buffer"/>
 </body>
 </html>
