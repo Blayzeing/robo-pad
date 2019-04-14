@@ -16,8 +16,8 @@ function init(){
   // The data ArrayBuffer
   var data = new ArrayBuffer(2);// 2 bytes, one for each wheel drive
   var int8View = new Int8Array(data);// View it
-  int8View[0] = 0;
-  int8View[1] = 255;
+  int8View[0] = 0;  // Servo
+  int8View[1] = 255;// LED
 
   testSocket.onopen = function (event) {
     console.log('Sending data...');
@@ -30,17 +30,33 @@ function init(){
     // Control commands.
     document.getElementById('LEDBtn').onclick=function(){
       ledState = !ledState;
+      if(int8View[1] != 0)
+      {
+        int8View[1] = 0;
+      }else{
+        int8View[1] = 255;
+      }
+      sendData();
     };
     document.getElementById('bufferBtn').onclick=function(){
       testSocket.send(data);
     };
+    var slider = document.getElementById('angleSlider');
+    slider.oninput=function(){
+      int8View[0] = slider.value;
+      sendData();
+    };
     console.log('setting interval...');
-    theInterval = setInterval(function(){console.log('sending data...'); sendData();},500);
+    // TODO: Instead of having it spam packets like this, we should only send packets when something
+    //       changes maybe? Have the robot keep track of it's last data, then only update the differences
+    //       so that it's not constantly changing what it's outputting to the motors.
+    //theInterval = setInterval(function(){console.log('sending data...'); sendData();},500);
     function sendData(){
       // Should be an ArrayBuffer
-      testSocket.send(ledState?'ledon':'ledoff');
+      //testSocket.send(ledState?'ledon':'ledoff');
       //view[0] = ledState?1:0;
       //testSocket.send(view);
+      testSocket.send(data);
     }
   };
 }
@@ -50,8 +66,9 @@ if(document.getElementById) window.onload=init;
 <body>
   <h1>This is the websocket page</h1>
   <p>Bleh.</p>
-  <input id="disconnectBtn" type="button" value="Disconnect"/>
-  <input id="LEDBtn" type="button" value="LED"/>
-  <input id="bufferBtn" type="button" value="Send Buffer"/>
+  <input id='disconnectBtn' type='button' value='Disconnect'/>
+  <input id='LEDBtn' type='button' value='LED'/>
+  <input id='bufferBtn' type='button' value='Send Buffer'/>
+  <input id='angleSlider' type='range' min='1' max='255' value='0' class='slider'/>
 </body>
 </html>
