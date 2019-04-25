@@ -60,12 +60,13 @@ function init(){
     }
   };
 }
-if(document.getElementById) window.onload=init;
+//if(document.getElementById) window.onload=init;
   </script>
 </head>
 <body>
   <h1>This is the websocket page</h1>
   <p>Bleh.</p>
+  <input id='connectBtn' type='button' value='Connect' onclick='init();'/> <!-- This is not the best way to do this !-->
   <input id='disconnectBtn' type='button' value='Disconnect'/>
   <input id='LEDBtn' type='button' value='LED'/>
   <input id='bufferBtn' type='button' value='Send Buffer'/>
