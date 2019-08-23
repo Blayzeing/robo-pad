@@ -20,6 +20,7 @@
 // -- Should probably be the minimum length of the data being sent, aka bools use 1 bit, drive commands 1 byte.
 // -- Booleans should probably be bundled into groups of 4, so they can be sent as one byte.
 // - Add yeild() command, to let TCP stack things happen
+// - Create motor driver class to handle reversals etc
 
 const char* ssid = "robo-padd";
 const char* password = "roboteers";
@@ -40,7 +41,7 @@ void setup(void){
   WiFi.softAP(ssid, password);
 
   // Setting up the updater
-  httpUpdater.setup(&httpServer);
+  //httpUpdater.setup(&httpServer);
 
   // Setting up the websocket controller
   httpServer.on("/controller", handleController);
@@ -53,8 +54,8 @@ void setup(void){
   Serial.println("/update in your browser");
 
   // Setting up the websocket stuff
-  webSocket.begin();
-  webSocket.onEvent(webSocketEvent);
+  /*webSocket.begin();
+  webSocket.onEvent(webSocketEvent);*/
 
   configureHardware();// Configure the hardware connections
 }
@@ -95,6 +96,8 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length
       Serial.printf("[%u] get binary length: %u\n", num, length);
       Serial.printf("[%u] Data[0]: %u\n", num, payload[0]);
       Serial.printf("[%u] Data[1]: %u\n", num, payload[1]);
+      Serial.printf("[%u] Data[2]: %u\n", num, payload[2]);
+      Serial.printf("[%u] Data[3]: %u\n", num, payload[3]);
       //hexdump(payload, length);
       parseData(payload);
       break;
@@ -111,9 +114,19 @@ void configureHardware()
 {
   // Based on the datastructure, configure the pinouts and what each thing does etc
   //pinMode(14, OUTPUT);
+  
   // Servo configuration
   testServo.attach(15);
   pinMode(LED_BUILTIN, OUTPUT);
+
+  // Drive motor configuration
+  // Left Motor(s)
+  pinMode(9, OUTPUT);
+  pinMode(5, OUTPUT);
+
+  // Right Motor(s)
+  pinMode(12, OUTPUT);
+  pinMode(16, OUTPUT);
 }
 void parseData(uint8_t * data)
 {
@@ -127,6 +140,27 @@ void parseData(uint8_t * data)
     digitalWrite(LED_BUILTIN, HIGH);
   }else{
     digitalWrite(LED_BUILTIN, LOW);
+  }
+
+  //bytes 2&3 (left motor drive speed/direction)
+  int leftMotorDrive = map(data[2], 0, 255, 0, 2048) - 1024;
+  int rightMotorDrive = map(data[3], 0, 255, 0, 2048) - 1024;
+
+  if(leftMotorDrive < 0)
+  {
+    // Drive the left motor backwards
+    analogWrite(4, abs(leftMotorDrive));
+  }else{
+    // Drive the left motor forwards
+    analogWrite(5, leftMotorDrive);
+  }
+  if(rightMotorDrive < 0)
+  {
+    // Drive the left motor backwards
+    analogWrite(12, abs(rightMotorDrive));
+  }else{
+    // Drive the left motor forwards
+    analogWrite(14, rightMotorDrive);
   }
 }
 

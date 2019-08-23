@@ -1,0 +1,2 @@
+Standard ESP Libraries
+WebSockets by Markus Sattler - https://github.com/Links2004/arduinoWebSockets

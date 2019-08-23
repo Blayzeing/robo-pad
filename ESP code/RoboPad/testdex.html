@@ -24,6 +24,7 @@ function init(){
   testSocket.onopen = function (event) {
     console.log('Sending data...');
     testSocket.send('WE ARE IN.');
+	document.getElementById('statusSpan').innerHTML = "Connected";
     // Shutdown commands.
     document.getElementById('disconnectBtn').onclick=function(){
       testSocket.close();
@@ -65,11 +66,6 @@ function init(){
 		int8View[3] = rightSlider.value;
 		sendData();
 	};
-    console.log('setting interval...');
-    // TODO: Instead of having it spam packets like this, we should only send packets when something
-    //       changes maybe? Have the robot keep track of it's last data, then only update the differences
-    //       so that it's not constantly changing what it's outputting to the motors.
-    //theInterval = setInterval(function(){console.log('sending data...'); sendData();},500);
     function sendData(){
       // Should be an ArrayBuffer
       //testSocket.send(ledState?'ledon':'ledoff');
@@ -78,6 +74,9 @@ function init(){
       testSocket.send(data);
     }
   };
+  testSocket.onclose = function (event) {
+    document.getElementById('statusSpan').innerHTML = "Disconnected";
+  }
 }
 //if(document.getElementById) window.onload=init;
 
@@ -143,5 +142,6 @@ let gamepadCount = navigator.getGamepads();
   <input id='angleSlider' type='range' min='1' max='255' value='0' class='slider'/>
   <input id='leftSlider' type='range' min='1' max='255' value='128' class='slider'/>
   <input id='rightSlider' type='range' min='1' max='255' value='128' class='slider'/>
+  <p>Connection Status: <span id="statusSpan">Disconnected</span></p>
 </body>
 </html>
