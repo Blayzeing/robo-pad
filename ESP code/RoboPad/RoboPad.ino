@@ -9,11 +9,15 @@
 
 const char* ssid = "robo-padd";
 const char* password = "roboteers";
+const char* VERSION_NUMBER = "1.0";
+const char* HOME_HTML_FORMAT = "version: %s<br><a href='controller'>controller</a><br><a href='update'>updater</a>\0";
+char home_html[100];
 
 ESP8266WebServer httpServer(80);
 WebSocketsServer webSocketServer = WebSocketsServer(81);
 
 void setup() {
+  
   // Setting up Serial and access point
   Serial.begin(115200);
   Serial.println();
@@ -23,6 +27,11 @@ void setup() {
         Serial.flush();
         delay(1000);
   }
+
+  Serial.print("version: ");
+  Serial.println(VERSION_NUMBER);
+  // Configure the version string
+  sprintf(home_html, HOME_HTML_FORMAT, VERSION_NUMBER);
 
   // Set up the http webserver in AP mode:
   WiFi.softAP(ssid, password);
@@ -54,7 +63,7 @@ void handleController() {
 }
 void handleConnection() {
   Serial.println("HTTP '/' Request recieved.");
-  httpServer.send(200, "text/html", "<a href='controller'>controller</a><br><a href='update'>updater</a>");
+  httpServer.send(200, "text/html", home_html);
 }
 
 /// WEBSOCKET METHODS:
