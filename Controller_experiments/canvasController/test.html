@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Canvas Controller</title>
+  <style>
+    body { background-color: #cccccc; font-family: Arial, Helvetica, Sans-Serif; Color: #000088; }
+  </style>
+  <script>
+    function verticalSlider (canvas)
+    {
+      this.canvas = canvas; // Set the canvas for this slider to draw on
+
+    // Some js will go here.
+    function main()
+    {
+      //console.log("hi");
+      const canvas = document.getElementById('controller');
+      const ctx = canvas.getContext('2d');
+
+      ctx.fillStyle = "green";
+      ctx.fillRect(0,0,canvas.width,canvas.height);
+      //ctx.fill();
+    }
+    if(document.getElementById) window.onload = main;
+  </script>
+</head>
+<body>
+  <canvas id="controller" width="1000" height="100%"></canvas>
+  <div id="vertSlider1" style="background-color: red; width: 100px; height: 100px"></div>
+</body>
+</head>
+</html>
