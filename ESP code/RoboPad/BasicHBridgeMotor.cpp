@@ -40,7 +40,7 @@ void BasicHBridgeMotor::drive(int value)
  */
 void BasicHBridgeMotor::drive(long value, long lowerBound, long upperBound)
 {
-  drive(map(value, lowerBound, upperBound, 0, PWMRANGE));
+  drive(map(value, lowerBound, upperBound, 0, PWMRANGE*2));
 }
 
 /**
