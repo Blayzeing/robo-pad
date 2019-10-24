@@ -1,9 +1,9 @@
-<!DOCTYPE html>
 <html class="maxheight">
 <head>
-  <title>Canvas Controller</title>
+  <title>ESP8266 Controller</title>
   <meta content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0' name='viewport' />
   <style>
+    body { background-color: #cccccc; font-family: Arial, Helvetica, Sans-Serif; Color: #000088; }
     body { padding: 0; margin: 0; background-color: #cccccc; font-family: Arial, Helvetica, Sans-Serif; Color: #000088; }
     .row {
 	    display: flex;
@@ -27,7 +27,44 @@
     }
   </style>
   <script>
+  var testSocket = null;
+  var ledState = false;
+  var data = new ArrayBuffer(4);// 2 bytes, one for each wheel drive
+  var int8View = new Int8Array(data);// View it
+  var heartBeatData = new ArrayBuffer(1);
+  function initConnection(){
+    console.log('init connection complete...');
+    testSocket = new WebSocket('ws://192.168.4.1:81');
+    var heartbeatSender;
+    console.log('connection attempted...');
+
+    // The data ArrayBuffer
+    int8View[0] = 0;  // Servo
+    int8View[1] = 255;// LED
+    int8View[2] = 128;// Left Motor
+    int8View[3] = 128;// Right Motor
+
+    testSocket.onopen = function (event) {
+      console.log('Sending data...');
+      testSocket.send('WE ARE IN.');
+      heartbeatSender = setInterval(sendHeartbeat,1000);// Send a heartbeat every second
+
+      testSocket.onclose = function (event) {
+        document.getElementById('statusSpan').innerHTML = "Disconnected";
+        clearInterval(heartbeatSender);
+      }
+      function sendHeartbeat ()
+      {
+      if(testSocket.readyState == WebSocket.OPEN)
+        testSocket.send(heartBeatData);
+      }
+    }
+  }
+
+///////// UI ELEMENTS
+
     lookuptable = {"vertSlider1":2,"vertSlider2":3};
+
     // This slider should probably be a class, allowing for universal configurations such as slider reset to be made there instead of in-code.
     // Can probably transfer the setting of all those onmousedown etc stuff there too...
     var sliderWidth = 10;//percent
@@ -38,22 +75,22 @@
       var slider = document.getElementById(name);
       slider.onmousemove = moveTracker;
       slider.ontouchmove = moveTracker;
-
       function moveTracker(e)
       {
         console.log("MOVEMENT for " + name);
         var rect = slider.getBoundingClientRect();
-        //var x = (e.clientX - rect.left)/rect.width;
         var clientY = e.clientY || e.targetTouches[0].pageY;
         var y = (clientY - rect.top)/rect.height;
-        //console.log("Mouse position: " +x+ ", " + y);
         var posFloat = (y*100 - sliderWidth/2);
         var pos = posFloat + "%";
         slider.getElementsByClassName("stick")[0].style.top=pos;
-        slider.getElementsByClassName("stick")[0].innerHTML=pos;
 
-        //console.log("setting bit: " + lookuptable[name] +" to " + Math.min(1,Math.max(0,posFloat/(100-sliderWidth))));
-        //console.log(Math.round(Math.min(1,Math.max(0,posFloat/(100-sliderWidth))) * 254));
+        // Send the data
+        if(testSocket != null && testSocket.readyState == WebSocket.OPEN)
+        {
+          int8View[lookuptable[name]] = Math.round(Math.min(1,Math.max(0,posFloat/(100-sliderWidth))) * 254)
+          testSocket.send(data);
+        }
       }
     }
     function unsetSlider(name)
@@ -63,8 +100,16 @@
       slider.onmousemove = null;
       slider.ontouchmove = null;
       slider.getElementsByClassName("stick")[0].style.top=midpoint;
+
+      if(testSocket != null && testSocket.readyState == WebSocket.OPEN)
+      {
+        int8View[lookuptable[name]] = 128; //The stop signal.
+        testSocket.send(data);
+      }
     }
-    //if(document.getElementById) window.onload = main;
+
+    if(document.getElementById) window.onload = initConnection;
+
   </script>
 </head>
 <body class="maxheight">
@@ -78,5 +123,6 @@
     </div>
   </div>
 </body>
-</head>
+<body>
+</body>
 </html>

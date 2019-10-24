@@ -2,6 +2,10 @@
 #include <ESP8266WebServer.h>
 #include <WebSocketsServer.h>
 
+#include <ESP8266WiFi.h>
+#include <ESP8266HTTPUpdateServer.h>
+
+#include <Servo.h>
 
 #include "ControllerCode.h"
 #include "GlobalRobopadConfig.h"
@@ -9,18 +13,365 @@
 
 #define DEBUG
 
-const char* ssid = "robo-padd";
-const char* password = "roboteers";
-const char* VERSION_NUMBER = "1.0";
-const char* HOME_HTML_FORMAT = "version: %s<br><a href='controller'>controller</a><br><a href='update'>updater</a>\0";
-char home_html[100];
+const char* ssid = "robo-lad";
+const char* password = "CoolBeans";
+const char* VERSION_NUMBER = "1.3b";
+const char* HOME_HTML_FORMAT = "version: %s<br><a href='controller'>controller</a><br><a href='newController'>New Controller</a><br><a href='spinner'>SPINNAH</a><br><a href='update'>updater</a>\0";
+char home_html[190];
+const char* NEW_CONTROLLER_HTML = "<html class=\"maxheight\">\n"
+"<head>\n"
+"  <title>ESP8266 Controller</title>\n"
+"  <meta content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0' name='viewport' />\n"
+"  <style>\n"
+"    body { background-color: #cccccc; font-family: Arial, Helvetica, Sans-Serif; Color: #000088; }\n"
+"    body { padding: 0; margin: 0; background-color: #cccccc; font-family: Arial, Helvetica, Sans-Serif; Color: #000088; }\n"
+"    .row {\n"
+"\t    display: flex;\n"
+"    }\n"
+"    .column {\n"
+"\t    flex:50%;\n"
+"    }\n"
+"    .maxheight {\n"
+"\t    height: 100%;\n"
+"    }\n"
+"    .slider{\n"
+"      margin: 0 5%;\n"
+"      background-color: #aaa;\n"
+"      overflow:hidden;\n"
+"      word-wrap:break-word;\n"
+"    }\n"
+"    .stick{\n"
+"      height: 10%;\n"
+"      background-color: #777;\n"
+"      position: relative;\n"
+"    }\n"
+"  </style>\n"
+"  <script>\n"
+"  var testSocket = null;\n"
+"  var ledState = false;\n"
+"  var data = new ArrayBuffer(4);// 2 bytes, one for each wheel drive\n"
+"  var int8View = new Int8Array(data);// View it\n"
+"  var heartBeatData = new ArrayBuffer(1);\n"
+"  function initConnection(){\n"
+"    console.log('init connection complete...');\n"
+"    testSocket = new WebSocket('ws://192.168.4.1:81');\n"
+"    var heartbeatSender;\n"
+"    console.log('connection attempted...');\n"
+"\n"
+"    // The data ArrayBuffer\n"
+"    int8View[0] = 0;  // Servo\n"
+"    int8View[1] = 255;// LED\n"
+"    int8View[2] = 128;// Left Motor\n"
+"    int8View[3] = 128;// Right Motor\n"
+"\n"
+"    testSocket.onopen = function (event) {\n"
+"      console.log('Sending data...');\n"
+"      testSocket.send('WE ARE IN.');\n"
+"      heartbeatSender = setInterval(sendHeartbeat,1000);// Send a heartbeat every second\n"
+"\n"
+"      testSocket.onclose = function (event) {\n"
+"        document.getElementById('statusSpan').innerHTML = \"Disconnected\";\n"
+"        clearInterval(heartbeatSender);\n"
+"      }\n"
+"      function sendHeartbeat ()\n"
+"      {\n"
+"      if(testSocket.readyState == WebSocket.OPEN)\n"
+"        testSocket.send(heartBeatData);\n"
+"      }\n"
+"    }\n"
+"  }\n"
+"\n"
+"///////// UI ELEMENTS\n"
+"\n"
+"    lookuptable = {\"vertSlider1\":2,\"vertSlider2\":3};\n"
+"\n"
+"    // This slider should probably be a class, allowing for universal configurations such as slider reset to be made there instead of in-code.\n"
+"    // Can probably transfer the setting of all those onmousedown etc stuff there too...\n"
+"    var sliderWidth = 10;//percent\n"
+"    var midpoint = (50-sliderWidth/2)+\"%\";\n"
+"    function setSlider(name)\n"
+"    {\n"
+"      console.log(\"SETTING \" + name);\n"
+"      var slider = document.getElementById(name);\n"
+"      slider.onmousemove = moveTracker;\n"
+"      slider.ontouchmove = moveTracker;\n"
+"      function moveTracker(e)\n"
+"      {\n"
+"        console.log(\"MOVEMENT for \" + name);\n"
+"        var rect = slider.getBoundingClientRect();\n"
+"        var clientY = e.clientY || e.targetTouches[0].pageY;\n"
+"        var y = (clientY - rect.top)/rect.height;\n"
+"        var posFloat = (y*100 - sliderWidth/2);\n"
+"        var pos = posFloat + \"%\";\n"
+"        slider.getElementsByClassName(\"stick\")[0].style.top=pos;\n"
+"\n"
+"        // Send the data\n"
+"        if(testSocket != null && testSocket.readyState == WebSocket.OPEN)\n"
+"        {\n"
+"          int8View[lookuptable[name]] = Math.round(Math.min(1,Math.max(0,posFloat/(100-sliderWidth))) * 254)\n"
+"          testSocket.send(data);\n"
+"        }\n"
+"      }\n"
+"    }\n"
+"    function unsetSlider(name)\n"
+"    {\n"
+"      console.log(\"UNSETTING \" + name);\n"
+"      var slider = document.getElementById(name);\n"
+"      slider.onmousemove = null;\n"
+"      slider.ontouchmove = null;\n"
+"      slider.getElementsByClassName(\"stick\")[0].style.top=midpoint;\n"
+"\n"
+"      if(testSocket != null && testSocket.readyState == WebSocket.OPEN)\n"
+"      {\n"
+"        int8View[lookuptable[name]] = 128; //The stop signal.\n"
+"        testSocket.send(data);\n"
+"      }\n"
+"    }\n"
+"\n"
+"    if(document.getElementById) window.onload = initConnection;\n"
+"\n"
+"  </script>\n"
+"</head>\n"
+"<body class=\"maxheight\">\n"
+"<!--<canvas id=\"controller\" width=\"1000\" height=\"100%\"></canvas>-->\n"
+"  <div class=\"row maxheight\">\n"
+"      <div class=\"column slider\" id=\"vertSlider1\" style=\"height: 100%\" onmousedown=\"setSlider('vertSlider1');\" onmouseup=\"unsetSlider('vertSlider1');\" ontouchstart=\"setSlider('vertSlider1');\" ontouchend=\"unsetSlider('vertSlider1');\">\n"
+"      <div class=\"stick\"></div>\n"
+"    </div>\n"
+"    <div class=\"column slider\" id=\"vertSlider2\" style=\"height: 100%\" onmousedown=\"setSlider('vertSlider2');\" onmouseup=\"unsetSlider('vertSlider2');\" ontouchstart=\"setSlider('vertSlider2');\" ontouchend=\"unsetSlider('vertSlider2');\">\n"
+"      <div class=\"stick\"></div>\n"
+"    </div>\n"
+"  </div>\n"
+"</body>\n"
+"<body>\n"
+"</body>\n"
+"</html>\n"
+"";
+
+const char* NEW_SPINNER_CONTROLLER_HTML = "<html class=\"maxheight\">\n"
+"<head>\n"
+"  <title>ESP8266 Controller</title>\n"
+"  <meta content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0' name='viewport' />\n"
+"  <style>\n"
+"    body { background-color: #cccccc; font-family: Arial, Helvetica, Sans-Serif; Color: #000088; }\n"
+"    body { padding: 0; margin: 0; background-color: #cccccc; font-family: Arial, Helvetica, Sans-Serif; Color: #000088; }\n"
+"    .row {\n"
+"\t    display: flex;\n"
+"    }\n"
+"    .column {\n"
+"\t    flex:50%;\n"
+"    }\n"
+"    .maxheight {\n"
+"\t    height: 100%;\n"
+"    }\n"
+"    .slider{\n"
+"      margin: 0 5%;\n"
+"      background-color: #aaa;\n"
+"      overflow:hidden;\n"
+"      word-wrap:break-word;\n"
+"    }\n"
+"    .joystick{\n"
+"      margin: 0 5%;\n"
+"      background-color: #aaa;\n"
+"      overflow:hidden;\n"
+"      word-wrap:break-word;\n"
+"    }\n"
+"    .wideStick{\n"
+"      height: 10%;\n"
+"      width: 100%;\n"
+"      background-color: #777;\n"
+"      position: relative;\n"
+"    }\n"
+"    .stick{\n"
+"      height: 10%;\n"
+"      width: 10%;\n"
+"      background-color: #777;\n"
+"      position: relative;\n"
+"    }\n"
+"  </style>\n"
+"  <script>\n"
+"  var testSocket = null;\n"
+"  var ledState = false;\n"
+"  var data = new ArrayBuffer(4);// 2 bytes, one for each wheel drive\n"
+"  var int8View = new Int8Array(data);// View it\n"
+"  var heartBeatData = new ArrayBuffer(1);\n"
+"  function initConnection(){\n"
+"    console.log('init connection complete...');\n"
+"    testSocket = new WebSocket('ws://192.168.4.1:81');\n"
+"    var heartbeatSender;\n"
+"    console.log('connection attempted...');\n"
+"\n"
+"    // The data ArrayBuffer\n"
+"    int8View[0] = 0;  // Servo\n"
+"    int8View[1] = 255;// LED\n"
+"    int8View[2] = 128;// Left Motor\n"
+"    int8View[3] = 128;// Right Motor\n"
+"\n"
+"    testSocket.onopen = function (event) {\n"
+"      console.log('Sending data...');\n"
+"      testSocket.send('WE ARE IN.');\n"
+"      heartbeatSender = setInterval(sendHeartbeat,1000);// Send a heartbeat every second\n"
+"\n"
+"      testSocket.onclose = function (event) {\n"
+"        document.getElementById('statusSpan').innerHTML = \"Disconnected\";\n"
+"        clearInterval(heartbeatSender);\n"
+"      }\n"
+"      function sendHeartbeat ()\n"
+"      {\n"
+"      if(testSocket.readyState == WebSocket.OPEN)\n"
+"        testSocket.send(heartBeatData);\n"
+"      }\n"
+"    }\n"
+"  }\n"
+"\n"
+"///////// UI ELEMENTS\n"
+"\n"
+"    lookuptable = {\"vertSlider1\":0,\"vertSlider2\":3, \"joystick1x\":2, \"joystick1y\":3};\n"
+"\n"
+"///////// SLIDER\n"
+"    // This slider should probably be a class, allowing for universal configurations such as slider reset to be made there instead of in-code.\n"
+"    // Can probably transfer the setting of all those onmousedown etc stuff there too...\n"
+"    var sliderWidth = 10;//percent\n"
+"    var midpoint = (50-sliderWidth/2)+\"%\";\n"
+"    function setSlider(name)\n"
+"    {\n"
+"      console.log(\"SETTING SLIDER \" + name);\n"
+"      var slider = document.getElementById(name);\n"
+"      slider.onmousemove = moveTracker;\n"
+"      slider.ontouchmove = moveTracker;\n"
+"      function moveTracker(e)\n"
+"      {\n"
+"        console.log(\"MOVEMENT for \" + name);\n"
+"        var rect = slider.getBoundingClientRect();\n"
+"        var clientY = e.clientY || e.targetTouches[0].pageY;\n"
+"        var y = (clientY - rect.top)/rect.height;\n"
+"        var posFloat = (y*100 - sliderWidth/2);\n"
+"        var pos = posFloat + \"%\";\n"
+"        slider.getElementsByClassName(\"wideStick\")[0].style.top=pos;\n"
+"\n"
+"        // Send the data\n"
+"        if(testSocket != null && testSocket.readyState == WebSocket.OPEN)\n"
+"        {\n"
+"          int8View[lookuptable[name]] = Math.round(Math.min(1,Math.max(0,posFloat/(100-sliderWidth))) * 254)\n"
+"          testSocket.send(data);\n"
+"        }\n"
+"      }\n"
+"    }\n"
+"    function unsetSlider(name)\n"
+"    {\n"
+"      console.log(\"UNSETTING \" + name);\n"
+"      var slider = document.getElementById(name);\n"
+"      slider.onmousemove = null;\n"
+"      slider.ontouchmove = null;\n"
+"      slider.getElementsByClassName(\"wideStick\")[0].style.top=midpoint;\n"
+"\n"
+"      if(testSocket != null && testSocket.readyState == WebSocket.OPEN)\n"
+"      {\n"
+"        int8View[lookuptable[name]] = 128; //The stop signal.\n"
+"        testSocket.send(data);\n"
+"      }\n"
+"    }\n"
+"    function unsetStaticSlider(name)\n"
+"    {\n"
+"      console.log(\"UNSETTING \" + name);\n"
+"      var slider = document.getElementById(name);\n"
+"      slider.onmousemove = null;\n"
+"      slider.ontouchmove = null;\n"
+"    }\n"
+"\n"
+"\n"
+"///////// JOYSTICK\n"
+"    var joystickSize = 10;//percent\n"
+"    var joystickMidpoint = (50-joystickSize/2)+\"%\";\n"
+"    function setJoystick(name)\n"
+"    {\n"
+"      console.log(\"SETTING JOYSTICK \" + name);\n"
+"      var joystick = document.getElementById(name);\n"
+"      joystick.onmousemove = moveTracker;\n"
+"      joystick.ontouchmove = moveTracker;\n"
+"      function moveTracker(e)\n"
+"      {\n"
+"        console.log(\"MOVEMENT for \" + name);\n"
+"        var rect = joystick.getBoundingClientRect();\n"
+"        var clientY = e.clientY || e.targetTouches[0].pageY;\n"
+"        var clientX = e.clientX || e.targetTouches[0].pageX;\n"
+"        var y = (clientY - rect.top)/rect.height;\n"
+"        var x = (clientX - rect.left)/rect.width;\n"
+"        var posYfloat = (y*100 - joystickSize/2);\n"
+"        var posXfloat = (x*100 - joystickSize/2);\n"
+"        var posY = posYfloat + \"%\";\n"
+"        var posX = posXfloat + \"%\";\n"
+"\n"
+"        posYfloat = (posYfloat/100) - 0.5;\n"
+"        posXfloat = (posXfloat/100) - 0.5;\n"
+"\n"
+"\n"
+"        //chan 4 = x\n"
+"        //chan 3 = y\n"
+"        leftPower = -posXfloat/2+posYfloat;\n"
+"        rightPower = posXfloat/2+posYfloat;\n"
+"\n"
+"\n"
+"        joystick.getElementsByClassName(\"stick\")[0].style.top=posY;\n"
+"        joystick.getElementsByClassName(\"stick\")[0].style.left=posX;\n"
+"\n"
+"        // Send the data\n"
+"        if(testSocket != null && testSocket.readyState == WebSocket.OPEN)\n"
+"        {\n"
+"          //int8View[lookuptable[name + \"x\"]] = Math.round(Math.min(1,Math.max(0,rightPower/(100-joystickSize))) * 254);\n"
+"          //int8View[lookuptable[name + \"y\"]] = Math.round(Math.min(1,Math.max(0,leftPower/(100-joystickSize))) * 254);\n"
+"          int8View[lookuptable[name + \"x\"]] = Math.round(Math.min(1,Math.max(0,rightPower+0.5)) * 254);\n"
+"          int8View[lookuptable[name + \"y\"]] = Math.round(Math.min(1,Math.max(0,leftPower+0.5)) * 254);\n"
+"          testSocket.send(data);\n"
+"        }\n"
+"      }\n"
+"    }\n"
+"    function unsetJoystick(name)\n"
+"    {\n"
+"      console.log(\"UNSETTING \" + name);\n"
+"      var slider = document.getElementById(name);\n"
+"      slider.onmousemove = null;\n"
+"      slider.ontouchmove = null;\n"
+"      slider.getElementsByClassName(\"stick\")[0].style.top=joystickMidpoint;\n"
+"      slider.getElementsByClassName(\"stick\")[0].style.left=joystickMidpoint;\n"
+"\n"
+"      if(testSocket != null && testSocket.readyState == WebSocket.OPEN)\n"
+"      {\n"
+"        int8View[lookuptable[name + \"x\"]] = 128; //The stop signal.\n"
+"        int8View[lookuptable[name + \"y\"]] = 128; //The stop signal.\n"
+"        testSocket.send(data);\n"
+"      }\n"
+"    }\n"
+"\n"
+"    if(document.getElementById) window.onload = initConnection;\n"
+"\n"
+"  </script>\n"
+"</head>\n"
+"<body class=\"maxheight\">\n"
+"  <div class=\"row maxheight\">\n"
+"    <div class=\"column slider\" id=\"vertSlider1\" style=\"height: 100%\" onmousedown=\"setSlider('vertSlider1');\" onmouseup=\"unsetStaticSlider('vertSlider1');\" ontouchstart=\"setSlider('vertSlider1');\" ontouchend=\"unsetStaticSlider('vertSlider1');\">\n"
+"      <div class=\"wideStick\"></div>\n"
+"    </div>\n"
+"    <div class=\"column joystick\" id=\"joystick1\" style=\"height: 100%\" onmousedown=\"setJoystick('joystick1');\" onmouseup=\"unsetJoystick('joystick1');\" ontouchstart=\"setJoystick('joystick1');\" ontouchend=\"unsetJoystick('joystick1');\">\n"
+"      <div class=\"stick\"></div>\n"
+"    </div>\n"
+"  </div>\n"
+"</body>\n"
+"<body>\n"
+"</body>\n"
+"</html>\n"
+"";
 
 unsigned long lastHeartbeat;
 unsigned int connectionCount = 0;
 #define RADIO_SILENCE_AUTO_CUTOFF 3000 // If there's no data in 3 seconds then shut down.
 
 ESP8266WebServer httpServer(80);
+ESP8266HTTPUpdateServer httpUpdater(true);
 WebSocketsServer webSocketServer = WebSocketsServer(81);
+
+//For spinner
+Servo esc;
 
 void setup() {
   
@@ -34,6 +385,9 @@ void setup() {
         delay(1000);
   }
 
+  // Setting up the updater
+  httpUpdater.setup(&httpServer);
+
   Serial.print("version: ");
   Serial.println(VERSION_NUMBER);
   // Configure the version string
@@ -43,6 +397,8 @@ void setup() {
   WiFi.softAP(ssid, password);
   httpServer.on("/", handleConnection);
   httpServer.on("/controller", handleController);
+  httpServer.on("/newController", handleNewController);
+  httpServer.on("/spinner", handleSpinnerController);
   httpServer.begin();
   IPAddress myIP = WiFi.softAPIP();
   Serial.print("HTTPUpdateServer ready! Open http://");
@@ -57,8 +413,8 @@ void setup() {
   configureIO();
 }
 
-BasicHBridgeMotor leftMotor(D7,D8);
-BasicHBridgeMotor rightMotor(D6,D0);
+BasicHBridgeMotor leftMotor(14,15);
+BasicHBridgeMotor rightMotor(12,13);
 void loop() {
   httpServer.handleClient();
   webSocketServer.loop();
@@ -69,6 +425,7 @@ void loop() {
     //Serial.println("EMERGENCY STOP ENGUAGED.");
     leftMotor.stop();
     rightMotor.stop();
+    esc.writeMicroseconds(1000);
     //delay(10000);
   }
 }
@@ -81,6 +438,14 @@ void handleController() {
 void handleConnection() {
   Serial.println("HTTP '/' Request recieved.");
   httpServer.send(200, "text/html", home_html);
+}
+void handleNewController(){
+  Serial.println("HTTP '/' Request recieved.");
+  httpServer.send(200, "text/html", NEW_CONTROLLER_HTML);
+}
+void handleSpinnerController(){
+  Serial.println("HTTP '/' Request recieved.");
+  httpServer.send(200, "text/html", NEW_SPINNER_CONTROLLER_HTML);
 }
 
 /// WEBSOCKET METHODS:
@@ -130,12 +495,16 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length
 ///BasicHBridgeMotor rightMotor(D6,D0);
 void configureIO() {
   // GENERATOR: Cycles through every element in the physical config layer, generates a section down here based on that (Mostly this will just be setting up servos and LEDs
+
+  esc.attach(16);
+  esc.writeMicroseconds(1000);
 }
 
 void parseData(uint8_t * data)
 {
   // Byte 0
-  /// This is the servo
+  /// This is the servo NOPE SPINNAH
+  esc.writeMicroseconds(map(255-data[0], 0, 255, 1000,2000));
   
   // Byte 1
   if(data[1] > 0)
