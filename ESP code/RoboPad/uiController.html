@@ -143,10 +143,10 @@
 	var slider2 = document.getElementById("vertSlider2");
 	
 	if(isMobile){
-	slider1.ontouchdown = function(){Slider.setSlider("vertSlider1")};
-	slider1.ontouchup = function (){Slider.unsetSlider("vertSlider1")};
-	slider2.ontouchdown = function(){Slider.setSlider("vertSlider2")};
-	slider2.ontouchup = function (){Slider.unsetSlider("vertSlider2")};
+	slider1.ontouchstart = function(){Slider.setSlider("vertSlider1")};
+	slider1.ontouchend = function (){Slider.unsetSlider("vertSlider1")};
+	slider2.ontouchstart = function(){Slider.setSlider("vertSlider2")};
+	slider2.ontouchend = function (){Slider.unsetSlider("vertSlider2")};
 	}	
 	else{
 	slider1.onmousedown = function(){Slider.setSlider("vertSlider1")};
