@@ -13,10 +13,11 @@
 
 #define DEBUG
 
-const char* ssid = "robo-lad";
-const char* password = "CoolBeans";
-const char* VERSION_NUMBER = "1.3b";
-const char* HOME_HTML_FORMAT = "version: %s<br><a href='controller'>controller</a><br><a href='newController'>New Controller</a><br><a href='spinner'>SPINNAH</a><br><a href='update'>updater</a>\0";
+const char* ssid = "robo-pad";
+const char* password = "roboteers";
+const char* VERSION_NUMBER = "1.3c";
+const char* SAFEBOOT_HTML = "ROBOPAD IS IN SAFEBOOT MODE, CLICK <a href='update'>HERE</a> TO UPLOAD NEW FIRMWARE.";
+const char* HOME_HTML_FORMAT = "version: %s<br><a href='controller'>controller</a><br><a href='newController'>Web Controller</a><br><a href='spinner'>SPINNAH</a><br><a href='update'>updater</a>\0";
 char home_html[190];
 const char* NEW_CONTROLLER_HTML = "<html class=\"maxheight\">\n"
 "<head>\n"
@@ -364,7 +365,9 @@ const char* NEW_SPINNER_CONTROLLER_HTML = "<html class=\"maxheight\">\n"
 
 unsigned long lastHeartbeat;
 unsigned int connectionCount = 0;
+bool safeboot = false;
 #define RADIO_SILENCE_AUTO_CUTOFF 3000 // If there's no data in 3 seconds then shut down.
+#define SAFEBOOT_PIN 16 // Used as a switch (pulled low by circuit, pull high to safeboot)
 
 ESP8266WebServer httpServer(80);
 ESP8266HTTPUpdateServer httpUpdater(true);
@@ -385,16 +388,29 @@ void setup() {
         delay(1000);
   }
 
-  // Setting up the updater
-  httpUpdater.setup(&httpServer);
-
   Serial.print("version: ");
   Serial.println(VERSION_NUMBER);
-  // Configure the version string
-  sprintf(home_html, HOME_HTML_FORMAT, VERSION_NUMBER);
-
+  
+  // Setting up the updater
+  Serial.println("Initialising OTA updater...");
+  httpUpdater.setup(&httpServer);
+  Serial.println("Starting access point...");
   // Set up the http webserver in AP mode:
   WiFi.softAP(ssid, password);
+  
+  Serial.println("Checking safeboot...");
+  pinMode(SAFEBOOT_PIN, INPUT);
+  if(digitalRead(SAFEBOOT_PIN) == 1)
+  {
+    Serial.println("Safeboot activated! Ceasing operations bar updater. Please navigate to /update");
+    httpServer.onNotFound(handleSafeboot);
+    httpServer.begin();
+    safeboot = true;
+    return;
+  }
+
+  // Configure the page listeners
+  sprintf(home_html, HOME_HTML_FORMAT, VERSION_NUMBER);
   httpServer.on("/", handleConnection);
   httpServer.on("/controller", handleController);
   httpServer.on("/newController", handleNewController);
@@ -417,6 +433,9 @@ BasicHBridgeMotor leftMotor(14,15);
 BasicHBridgeMotor rightMotor(12,13);
 void loop() {
   httpServer.handleClient();
+
+  if(safeboot) return;// Make sure we don't do anything when safeboot is operational.
+  
   webSocketServer.loop();
 
   // Make sure we shutdown if we haven't recieved data recently or if we've lost connection to all controllers
@@ -431,6 +450,10 @@ void loop() {
 }
 
 /// HTTP METHODS
+void handleSafeboot() {
+  Serial.println("HTTP '/' Request recieved while in safemode.");
+  httpServer.send(200, "text/html", SAFEBOOT_HTML);
+}
 void handleController() {
   Serial.println("HTTP '/controller' Request recieved.");
   httpServer.send(200, "text/html", PAGE_HTML);

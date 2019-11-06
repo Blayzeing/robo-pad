@@ -1,0 +1,2 @@
+[2019-11-06] 1.3c
+ - Adds first safeboot mode implementation, this can be activated by holding GPIO16 (Robo66 P10) high (3.3v) and will only run the OTA updater
