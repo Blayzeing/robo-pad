@@ -10,6 +10,7 @@
 #include "ControllerCode.h"
 #include "RoboPadCore.h"
 
+//#define PPM
 #define DEBUG
 
 const char* ssid = "robo-pad";
@@ -368,6 +369,14 @@ bool safeboot = false;
 #define RADIO_SILENCE_AUTO_CUTOFF 3000 // If there's no data in 3 seconds then shut down.
 #define SAFEBOOT_PIN 16 // Used as a switch (pulled low by circuit, pull high to safeboot)
 
+#ifdef PPM
+#define PPM_CHANNELS 8
+#define PPM_PIN 3
+#define PPM_MIN_PULSE_DURATION 550
+#define PPM_MAX_PULSE_DURATION 1850
+unsigned char channels[PPM_CHANNELS];
+#endif
+
 ESP8266WebServer httpServer(80);
 ESP8266HTTPUpdateServer httpUpdater(true);
 WebSocketsServer webSocketServer = WebSocketsServer(81);
@@ -423,10 +432,37 @@ void setup() {
   // Set up the websocket server:
   webSocketServer.begin();
   webSocketServer.onEvent(webSocketEvent);
+  Serial.println("WebSocket server started.");
 
   // Configure IO
   configureIO();
+
+  attachInterrupt(PPM_PIN, interruptPPM, CHANGE);
+  Serial.println("PPM interrupt attatched");
 }
+
+#ifdef PPM
+long counter = 0;
+long startMicros = 0;
+long minSync = 2500;
+bool ppmActive = false;
+
+ICACHE_RAM_ATTR void interruptPPM () {
+  if (digitalRead(PPM_PIN)) {
+    startMicros = micros();
+  } else {
+    long duration = micros() - startMicros;
+    if (duration > minSync) {
+      counter = 0;
+    } else {
+      channels[counter] = map(duration, PPM_MIN_PULSE_DURATION, PPM_MAX_PULSE_DURATION, 0.0, 255.0);
+      counter += 1;
+    }
+  }
+
+  ppmActive = true;
+}
+#endif
 
 BasicHBridgeMotor leftMotor(14,15);
 BasicHBridgeMotor rightMotor(12,13);
@@ -434,11 +470,26 @@ void loop() {
   httpServer.handleClient();
 
   if(safeboot) return;// Make sure we don't do anything when safeboot is operational.
+
+  #ifdef PPM
+  if (ppmActive) {
+    esc.writeMicroseconds(map(channels[2], 0, 255, 1000, 2000));
+    leftMotor.drive(channels[0], 0, 255);
+    rightMotor.drive(channels[1], 0, 255);
+    
+    ppmActive = false;
+  }
+  #endif
   
   webSocketServer.loop();
 
   // Make sure we shutdown if we haven't recieved data recently or if we've lost connection to all controllers
-  if(connectionCount < 1 || millis() - lastHeartbeat > RADIO_SILENCE_AUTO_CUTOFF)
+  if((connectionCount < 1 || millis() - lastHeartbeat > RADIO_SILENCE_AUTO_CUTOFF)
+  #ifdef PPM
+  // Additional check to see if we've also not had a PPM update recently
+  && (!ppmActive && micros() - startMicros > RADIO_SILENCE_AUTO_CUTOFF*1000)
+  #endif
+  )
   {
     //Serial.println("EMERGENCY STOP ENGUAGED.");
     leftMotor.stop();
@@ -518,22 +569,24 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length
 void configureIO() {
   // GENERATOR: Cycles through every element in the physical config layer, generates a section down here based on that (Mostly this will just be setting up servos and LEDs
 
+  #ifdef PPM
+  pinMode(PPM_PIN, INPUT);
+  #endif
+
   esc.attach(16);
   esc.writeMicroseconds(1000);
 }
 
-void parseData(uint8_t * data)
-{
+void parseData(uint8_t * data) {
   // Byte 0
   /// This is the servo NOPE SPINNAH
   esc.writeMicroseconds(map(255-data[0], 0, 255, 1000,2000));
   
   // Byte 1
-  if(data[1] > 0)
-  {
-  digitalWrite(LED_BUILTIN, HIGH);
-  }else{
-  digitalWrite(LED_BUILTIN, LOW);
+  if(data[1] > 0) {
+    digitalWrite(LED_BUILTIN, HIGH);
+  } else {
+    digitalWrite(LED_BUILTIN, LOW);
   }
   
   // Motor Bytes
