@@ -11,6 +11,7 @@
 #include "RoboPadCore.h"
 
 //#define PPM
+//#define PPM_MIXING
 #define DEBUG
 
 const char* ssid = "robo-pad";
@@ -374,7 +375,7 @@ bool safeboot = false;
 #define PPM_PIN 3
 #define PPM_MIN_PULSE_DURATION 550
 #define PPM_MAX_PULSE_DURATION 1850
-unsigned char channels[PPM_CHANNELS];
+volatile unsigned char channels[PPM_CHANNELS];
 #endif
 
 ESP8266WebServer httpServer(80);
@@ -437,15 +438,17 @@ void setup() {
   // Configure IO
   configureIO();
 
+  #ifdef PPM
   attachInterrupt(PPM_PIN, interruptPPM, CHANGE);
   Serial.println("PPM interrupt attatched");
+  #endif
 }
 
 #ifdef PPM
 long counter = 0;
 long startMicros = 0;
 long minSync = 2500;
-bool ppmActive = false;
+volatile bool ppmActive = false;
 
 ICACHE_RAM_ATTR void interruptPPM () {
   if (digitalRead(PPM_PIN)) {
@@ -474,8 +477,14 @@ void loop() {
   #ifdef PPM
   if (ppmActive) {
     esc.writeMicroseconds(map(channels[2], 0, 255, 1000, 2000));
+    
+    #ifdef PPM_MIXING
+    leftMotor.drive(constrain((channels[1]-127)+(channels[0]-127), -127, 127)+127, 0, 255);
+    rightMotor.drive(constrain((channels[1]-127)-(channels[0]-127), -127, 127)+127, 0, 255);
+    #else
     leftMotor.drive(channels[0], 0, 255);
     rightMotor.drive(channels[1], 0, 255);
+    #endif
     
     ppmActive = false;
   }
