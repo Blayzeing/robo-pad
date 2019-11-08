@@ -1,0 +1,5 @@
+Common Firmware
+===============
+Version: 1.0
+
+Common classes go here, usually that handle the interfacing between the ESP and specific components.

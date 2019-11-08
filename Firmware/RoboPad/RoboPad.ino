@@ -8,8 +8,7 @@
 #include <Servo.h>
 
 #include "ControllerCode.h"
-#include "GlobalRobopadConfig.h"
-#include "BasicHBridgeMotor.h"
+#include "RoboPadCore.h"
 
 #define DEBUG
 
