@@ -18,8 +18,8 @@ const char* ssid = "robo-pad";
 const char* password = "roboteers";
 const char* VERSION_NUMBER = "1.4a";
 const char* SAFEBOOT_HTML = "ROBOPAD IS IN SAFEBOOT MODE, CLICK <a href='update'>HERE</a> TO UPLOAD NEW FIRMWARE.";
-const char* HOME_HTML_FORMAT = "version: %s<br><a href='controller'>controller</a><br><a href='newController'>Web Controller</a><br><a href='spinner'>SPINNAH</a><br><a href='update'>updater</a>\0";
-char home_html[190];
+const char* HOME_HTML_FORMAT = "version: %s<br><a href='controller'>Dev Page</a><br><a href='newController'>Web Controller</a><br><a href='spinner'>Spinner Controller</a><br><a href='update'>updater</a>\0";
+char home_html[200];
 const char* NEW_CONTROLLER_HTML = "<html class=\"maxheight\">\n"
 "<head>\n"
 "  <title>ESP8266 Controller</title>\n"

@@ -43,7 +43,7 @@ if(document.getElementById) window.onload=init;\n\
 </head>\n\
 <body>\n\
   <h1>This is the websocket page</h1>\n\
-  <p>Bleh.</p>\n\
+  <p>This page is reserved for development purposes.</p>\n\
   <input id=\"disconnectBtn\" type=\"button\" value=\"Disconnect\"/>\n\
   <input id=\"LEDBtn\" type=\"button\" value=\"LED\"/>\n\
 </body>\n\
