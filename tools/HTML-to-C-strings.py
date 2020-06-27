@@ -4,7 +4,7 @@
 ## TODO
 # 1. Removal of comments (but HTML and JS)
 # 2. Variable and function name compression (JS only; shorten variables down to a growing sequential list, eg: a,b,c...,ba,bb.. - avoiding keywords from both JS and HTML)
-# 3. LLZ compression on each file (requires decompression algorithm in C)
+# 3. LZ77 compression on each file (requires decompression algorithm in C)
 # 3a. Perhaps all-file compression, with unrolling on request?
 # 3b. Perhaps separate CSS (and JS?) out to it's own variable with per-request hosting - maybe just smash all CSS together? ...probably just make it load a CSS file and make a special variable for it
 
