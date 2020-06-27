@@ -39,7 +39,7 @@ def main(argv):
   for filename in os.listdir(htmlFolder):
     print("Composing file '%s'..."%filename)
 
-RESERVED_WORDS = [] # A list of reserved words from HTML and JS here
+RESERVED_WORDS = [] # A list of reserved words from HTML and JS here (See: https://www.w3schools.in/javascript-tutorial/keywords/ )
 
 if __name__ == "__main__":
   main(sys.argv[1:])
