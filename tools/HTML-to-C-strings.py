@@ -18,6 +18,7 @@ import sys
 import getopt
 from functools import reduce
 from enum import Enum
+import re
 
 class State(Enum):
   IN_HTML                   = 1
@@ -118,23 +119,6 @@ EXTENDED_TRANSITION_TABLE = { State.IN_HTML: {"<!--" : State.IN_HTML_COMMENT,
                                     "<script>" : State.IN_JS,
                                     "<style>" : State.IN_CSS},
                      State.IN_HTML_COMMENT: {"-->" : State.IN_HTML},
-                     State.IN_JS: {"</script>" : State.IN_HTML,
-                                   "/*" : State.IN_JS_BLOCK_COMMENT,
-                                   "//" : State.IN_JS_SINGLE_LINE_COMMENT},
-                     State.IN_JS_SINGLE_LINE_COMMENT: {"\n" : State.IN_JS},
-                     State.IN_JS_BLOCK_COMMENT: {"*/" : State.IN_JS},
-                     State.IN_JS_STRING_LITERAL1: {},
-                     State.IN_JS_STRING_LITERAL2: {},
-                     State.IN_CSS: {"</style>" : State.IN_HTML,
-                                    "/*" : State.IN_CSS_BLOCK_COMMENT},
-                     State.IN_CSS_BLOCK_COMMENT: {"*/" : State.IN_CSS},
-                     State.IN_CSS_STRING_LITERAL1: {},
-                     State.IN_CSS_STRING_LITERAL2: {}
-                    }
-EXTENDED_TRANSITION_TABLE = { State.IN_HTML: {"<!--" : State.IN_HTML_COMMENT,
-                                    "<script>" : State.IN_JS,
-                                    "<style>" : State.IN_CSS},
-                     State.IN_HTML_COMMENT: {"-->" : State.IN_HTML},
                      State.IN_JS: {"</script>" : State.IN_HTML},
                      State.IN_JS_SINGLE_LINE_COMMENT: {"\n" : State.IN_JS},
                      State.IN_JS_BLOCK_COMMENT: {},
@@ -150,37 +134,60 @@ NOSTRINGS_TRANSITION_TABLE = { State.IN_HTML: {"<!--" : State.IN_HTML_COMMENT,
                                     "<style>" : State.IN_CSS},
                      State.IN_HTML_COMMENT: {"-->" : State.IN_HTML},
                      State.IN_JS: {"</script>" : State.IN_HTML,
-                                   "/*" : State.IN_JS_BLOCK_COMMENT,
+                                   "/\*" : State.IN_JS_BLOCK_COMMENT,
                                    "//" : State.IN_JS_SINGLE_LINE_COMMENT},
                      State.IN_JS_SINGLE_LINE_COMMENT: {"\n" : State.IN_JS},
-                     State.IN_JS_BLOCK_COMMENT: {"*/" : State.IN_JS},
+                     State.IN_JS_BLOCK_COMMENT: {"\*/" : State.IN_JS},
                      State.IN_JS_STRING_LITERAL1: {},
                      State.IN_JS_STRING_LITERAL2: {},
                      State.IN_CSS: {"</style>" : State.IN_HTML,
-                                    "/*" : State.IN_CSS_BLOCK_COMMENT},
-                     State.IN_CSS_BLOCK_COMMENT: {"*/" : State.IN_CSS},
+                                    "/\*" : State.IN_CSS_BLOCK_COMMENT},
+                     State.IN_CSS_BLOCK_COMMENT: {"\*/" : State.IN_CSS},
                      State.IN_CSS_STRING_LITERAL1: {},
                      State.IN_CSS_STRING_LITERAL2: {}
                     }
-TRANSITION_TABLE = NOSTRINGS_TRANSITION_TABLE
+BASE_TRANSITION_TABLE = { State.IN_HTML: {"<!--" : State.IN_HTML_COMMENT,
+                                    "<script>" : State.IN_JS,
+                                    "<style>" : State.IN_CSS},
+                     State.IN_HTML_COMMENT: {"-->" : State.IN_HTML},
+                     State.IN_JS: {"</script>" : State.IN_HTML,
+                                   "/\*" : State.IN_JS_BLOCK_COMMENT,
+                                   "'" : State.IN_JS_STRING_LITERAL1,
+                                   "\"" : State.IN_JS_STRING_LITERAL2,
+                                   "//" : State.IN_JS_SINGLE_LINE_COMMENT},
+                     State.IN_JS_SINGLE_LINE_COMMENT: {"\n" : State.IN_JS},
+                     State.IN_JS_BLOCK_COMMENT: {"\*/" : State.IN_JS},
+                     State.IN_JS_STRING_LITERAL1: {"[^\\\\]'": State.IN_JS},
+                     State.IN_JS_STRING_LITERAL2: {"[^\\\\}\"": State.IN_JS},
+                     State.IN_CSS: {"</style>" : State.IN_HTML,
+                                    "/\*" : State.IN_CSS_BLOCK_COMMENT,
+                                    "'" : State.IN_CSS_STRING_LITERAL1,
+                                    "\"" : State.IN_CSS_STRING_LITERAL2},
+                     State.IN_CSS_BLOCK_COMMENT: {"\*/" : State.IN_CSS},
+                     State.IN_CSS_STRING_LITERAL1: {"[^\\\\]'" : State.IN_CSS},
+                     State.IN_CSS_STRING_LITERAL2: {"[^\\\\]\"" : State.IN_CSS}
+                    }
+TRANSITION_TABLE = BASE_TRANSITION_TABLE
 COMMENT_STATES = [State.IN_HTML_COMMENT, State.IN_JS_SINGLE_LINE_COMMENT, State.IN_JS_BLOCK_COMMENT, State.IN_CSS_BLOCK_COMMENT]
 
-COMMENT_STRINGS = ["<!--", "-->", "/*", "*/", "//"]
+COMMENT_STRINGS = ["<!--", "-->", "/\*", "\*/", "//"]
 
 # Parses a string and a state variable, processes the string and returns an updated state and resultant string
 def parseLine(line, inState):
   output = ""
   outState = inState
 
-  #print("PARSING AS "+str(inState)+": ", line)
+  print("PARSING AS "+str(inState)+": ", line)
 
   if line != "" and len(TRANSITION_TABLE[inState].keys()) > 0:
     # Store the indicies of the first of each of the associated potential transition strings in the line:
-    occuranceIndicies = [line.find(k) for k in TRANSITION_TABLE[inState].keys()]
+    #occuranceIndicies = [line.find(k) for k in TRANSITION_TABLE[inState].keys()]
+    occuranceIndicies = [re.search(k, line) for k in TRANSITION_TABLE[inState].keys()] # Use regex instead of find
+    occuranceIndicies = list(map(lambda n: -1 if n == None else n.span()[0], occuranceIndicies))# Convert Nones to -1s so that the next bit works
     # Now zip(? don't. Just keep them both as ordered lists) the occurance indicies with the states that they produce,
     # Argmin to find the first (if existing) ocuring match, store the state that implies will be next
     closestIndex, value = argmin(occuranceIndicies, len(line))
-    #print("DATA:", "'"+line.strip()+"'\n", "PROCESSING:", list(TRANSITION_TABLE[inState].keys()), occuranceIndicies, closestIndex, value, "END DATA")
+    print("DATA:", "'"+line.strip()+"'\n", "PROCESSING:", list(TRANSITION_TABLE[inState].keys()), occuranceIndicies, closestIndex, value, "END DATA")
     nextState = inState # For when the state doesn't change
     if closestIndex == -1:
       # None of the strings were found, so set the value to the end of the line
@@ -189,17 +196,16 @@ def parseLine(line, inState):
       nextState = TRANSITION_TABLE[inState][list(TRANSITION_TABLE[inState].keys())[closestIndex]]
       #print("State transition found!", nextState)
     # Process (depending on state [write/don't write, eliminate spaces etc]) the stuff up until and including (depending on if the previous state or next state is a COMMENT_STATE) the first match
-    leftHalf = line[:value]# The string up to (and excluding the transition string) the transition string
     tokenString = list(TRANSITION_TABLE[inState].keys())[closestIndex]
-    #rightHalf = line[value + (len(tokenString) if nextState in COMMENT_STATES else 0):]# The remaining half of the line (excluding the transition string if the next state is a comment)
-    rightHalf = line[value + (len(tokenString) if tokenString in COMMENT_STRINGS else 0):]# The remaining half of the line (excluding the transition string if the next state is a comment)
+    leftHalf = line[:value + (len(tokenString) if tokenString not in COMMENT_STRINGS else 0)]# The string up to and including the transition string (if it's not a comment)
+    rightHalf = line[value + len(tokenString):]# The remaining half of the line (excluding the transition string)
     
     if(inState in COMMENT_STATES):
       # If we're in a comment state, just move on
       output, outState = parseLine(rightHalf, nextState)
     else:
       # If we're not, then perform state-specific masking of the output
-      output = stateSpecificMasking(leftHalf)
+      output = stateSpecificMasking(leftHalf, inState)
       parsedRight, outState = parseLine(rightHalf, nextState)
       output = output + parsedRight
 
@@ -207,7 +213,9 @@ def parseLine(line, inState):
   return output, outState
 
 # Takes a tokenless string and alters it based on the contents
-def stateSpecificMasking(line):
+def stateSpecificMasking(line, state):
+  if state == State.IN_CSS_STRING_LITERAL1 or state == State.IN_CSS_STRING_LITERAL2 :
+    line = line.replace(" ", "@")
   return line # For now just pass back the entire string. Maybe Do things like variable contraction or operator space removal in the future
 
 # Returns the (index, and then the value of the lowest number in a list):
