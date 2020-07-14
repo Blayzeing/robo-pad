@@ -82,71 +82,7 @@ def removeVerbosity(filepath):
 RESERVED_WORDS = [] # A list of reserved words from HTML and JS here (See: https://www.w3schools.in/javascript-tutorial/keywords/ )
 
 # The state transition table, in the form: [<Current State>][<string found>][<next state>]
-BASE_TRANSITION_TABLE = { State.IN_HTML: {"<!--" : State.IN_HTML_COMMENT,
-                                    "<script>" : State.IN_JS,
-                                    "<style>" : State.IN_CSS},
-                     State.IN_HTML_COMMENT: {"-->" : State.IN_HTML},
-                     State.IN_JS: {"</script>" : State.IN_HTML,
-                                   "/*" : State.IN_JS_BLOCK_COMMENT,
-                                   "'" : State.IN_JS_STRING_LITERAL1,
-                                   "\"" : State.IN_JS_STRING_LITERAL2,
-                                   "//" : State.IN_JS_SINGLE_LINE_COMMENT},
-                     State.IN_JS_SINGLE_LINE_COMMENT: {"\n" : State.IN_JS},
-                     State.IN_JS_BLOCK_COMMENT: {"*/" : State.IN_JS},
-                     State.IN_JS_STRING_LITERAL1: {"[^\]'": State.IN_JS},
-                     State.IN_JS_STRING_LITERAL2: {"[^\}\"": State.IN_JS},
-                     State.IN_CSS: {"</style>" : State.IN_HTML,
-                                    "/*" : State.IN_CSS_BLOCK_COMMENT,
-                                    "'" : State.IN_CSS_STRING_LITERAL1,
-                                    "\"" : State.IN_CSS_STRING_LITERAL2},
-                     State.IN_CSS_BLOCK_COMMENT: {"*/" : State.IN_CSS},
-                     State.IN_CSS_STRING_LITERAL1: {"[^\]'" : State.IN_CSS},
-                     State.IN_CSS_STRING_LITERAL2: {"[^\]\"" : State.IN_CSS}
-                    }
-STYLE_TRANSITION_TABLE = { State.IN_HTML: { "<style>" : State.IN_CSS},
-                     State.IN_HTML_COMMENT: {},
-                     State.IN_JS: {},
-                     State.IN_JS_BLOCK_COMMENT: {},
-                     State.IN_JS_SINGLE_LINE_COMMENT: {"\n" : State.IN_JS},
-                     State.IN_JS_STRING_LITERAL1: {},
-                     State.IN_JS_STRING_LITERAL2: {},
-                     State.IN_CSS: {"</style>" : State.IN_HTML},
-                     State.IN_CSS_BLOCK_COMMENT: {},
-                     State.IN_CSS_STRING_LITERAL1: {},
-                     State.IN_CSS_STRING_LITERAL2: {}
-                    }
-EXTENDED_TRANSITION_TABLE = { State.IN_HTML: {"<!--" : State.IN_HTML_COMMENT,
-                                    "<script>" : State.IN_JS,
-                                    "<style>" : State.IN_CSS},
-                     State.IN_HTML_COMMENT: {"-->" : State.IN_HTML},
-                     State.IN_JS: {"</script>" : State.IN_HTML},
-                     State.IN_JS_SINGLE_LINE_COMMENT: {"\n" : State.IN_JS},
-                     State.IN_JS_BLOCK_COMMENT: {},
-                     State.IN_JS_STRING_LITERAL1: {},
-                     State.IN_JS_STRING_LITERAL2: {},
-                     State.IN_CSS: {"</style>" : State.IN_HTML},
-                     State.IN_CSS_BLOCK_COMMENT: {},
-                     State.IN_CSS_STRING_LITERAL1: {},
-                     State.IN_CSS_STRING_LITERAL2: {}
-                    }
-NOSTRINGS_TRANSITION_TABLE = { State.IN_HTML: {"<!--" : State.IN_HTML_COMMENT,
-                                    "<script>" : State.IN_JS,
-                                    "<style>" : State.IN_CSS},
-                     State.IN_HTML_COMMENT: {"-->" : State.IN_HTML},
-                     State.IN_JS: {"</script>" : State.IN_HTML,
-                                   "/\*" : State.IN_JS_BLOCK_COMMENT,
-                                   "//" : State.IN_JS_SINGLE_LINE_COMMENT},
-                     State.IN_JS_SINGLE_LINE_COMMENT: {"\n" : State.IN_JS},
-                     State.IN_JS_BLOCK_COMMENT: {"\*/" : State.IN_JS},
-                     State.IN_JS_STRING_LITERAL1: {},
-                     State.IN_JS_STRING_LITERAL2: {},
-                     State.IN_CSS: {"</style>" : State.IN_HTML,
-                                    "/\*" : State.IN_CSS_BLOCK_COMMENT},
-                     State.IN_CSS_BLOCK_COMMENT: {"\*/" : State.IN_CSS},
-                     State.IN_CSS_STRING_LITERAL1: {},
-                     State.IN_CSS_STRING_LITERAL2: {}
-                    }
-BASE_TRANSITION_TABLE = { State.IN_HTML: {"<!--" : State.IN_HTML_COMMENT,
+TRANSITION_TABLE = { State.IN_HTML: {"<!--" : State.IN_HTML_COMMENT,
                                     "<script>" : State.IN_JS,
                                     "<style>" : State.IN_CSS},
                      State.IN_HTML_COMMENT: {"-->" : State.IN_HTML},
@@ -167,9 +103,7 @@ BASE_TRANSITION_TABLE = { State.IN_HTML: {"<!--" : State.IN_HTML_COMMENT,
                      State.IN_CSS_STRING_LITERAL1: {"[^\\\\]'" : State.IN_CSS},
                      State.IN_CSS_STRING_LITERAL2: {"[^\\\\]\"" : State.IN_CSS}
                     }
-TRANSITION_TABLE = BASE_TRANSITION_TABLE
 COMMENT_STATES = [State.IN_HTML_COMMENT, State.IN_JS_SINGLE_LINE_COMMENT, State.IN_JS_BLOCK_COMMENT, State.IN_CSS_BLOCK_COMMENT]
-
 COMMENT_STRINGS = ["<!--", "-->", "/\*", "\*/", "//"]
 
 # Parses a string and a state variable, processes the string and returns an updated state and resultant string
@@ -225,6 +159,7 @@ def stateSpecificMasking(line, state):
     for op in operators:
       line = re.sub("\s*"+re.escape(op)+"\s*", op, line)
   # Could get rid of all semicolons at EOL in JS (and just rely on the newline character)?
+  # Could store JS variable names and replace them out with shorter ones as and when they're referred to (watch the variables referenced in HTML though :/)
   return line
 
 # Returns the (index, and then the value of the lowest number in a list):
@@ -239,65 +174,6 @@ def argmin(ls, mx):
       best = l
       bestI = i
   return bestI, best
-
-#  if inState == State.IN_HTML:
-#    # Check for start of HTML comment, start of JS, start of CSS
-#    # Then parse the leftovers
-#  elif inState == State.IN_HTML_COMMENT:
-#    # Check for end of HTML comment
-#    # Parse leftovers
-#  elif inState == State.IN_JS:
-#    # Remove eol comments
-#    line = line.split("//")[0];
-#    # Check for end of JS
-#    # Parse leftovers
-#  elif inState == State.IN_JS_BLOCK_COMMENT:
-#    # Check for end of JS block comment
-#    # Parse leftovers
-#  elif inState == State.IN_JS_STRING_LITERAL:
-#    # Check for end of JS string literal
-#    # Parse leftovers
-#  elif inState == State.IN_CSS:
-#    # Check for end of CSS, start of CSS block comment, start of CSS string literal
-#    # Parse leftovers
-#  elif inState == State.IN_CSS_BLOCK_COMMENT:
-#    # Check for end of CSS block comment
-#    # Parse leftovers
-#  elif inState == State.IN_CSS_STRING_LITERAL:
-#    # Check for end of CSS string literal
-#    # Parse leftovers
-#  else:
-#    # Bleh. Not sure what happens here.
-#    # Find the first ins
-
-#def searchForFirst(words, <LIST OF STRINGS AND THEIR RELATIVE STATE CHANGES (perhaps this should be a dict?)>)
-
-
-#    # Get rid of comments
-#    singleLineCommentSplit = line.split("//")
-#    line = singleLineCommentSplit[0] # Remove any single-line Javascript comments
-#
-#    # New design: Go through every character, track entrances and exits of string literals and multi-line comments (Deal with opening multiline comments after a single-line comment starts?)
-#    for i in len(line):
-#      if line[i] == " " and line[i+1] 
-#
-#    # Finally, look at the potentially removed single-line comments and see if they end any block started comments:
-#    inBlockComment = inBlockComment and not ( len(singleLineCommentSplit) > 1 and reduce((lambda: x, y: x or y), ["*/" in section for section in singleLineCommentSplit[1:]]) )
-#    # Note the above is equivilant to:
-#    #  if inBlockComment and len(singleLineCommentSplit) > 1 and reduce((lambda: x, y: x or y), ["*/" in section for section in singleLineCommentSplit[1:]]):
-#    #    inBlockComment = False
-#
-#
-#
-#    # Get rid of whitespace eitherside of operators (excluding anything within quote marks)
-#    # Get rid of leading and trailling whitespace and newlines
-#    #line = line.strip()
-#    print(line, end='')
-
-# Returns whether the position is between these two things within the code. This should probably be tracked line at a time...
-#def isSurrounded(start, position?, end):
-#  return Eh
-
 
 if __name__ == "__main__":
   main(sys.argv[1:])
