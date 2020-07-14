@@ -158,7 +158,7 @@ BASE_TRANSITION_TABLE = { State.IN_HTML: {"<!--" : State.IN_HTML_COMMENT,
                      State.IN_JS_SINGLE_LINE_COMMENT: {"\n" : State.IN_JS},
                      State.IN_JS_BLOCK_COMMENT: {"\*/" : State.IN_JS},
                      State.IN_JS_STRING_LITERAL1: {"[^\\\\]'": State.IN_JS},
-                     State.IN_JS_STRING_LITERAL2: {"[^\\\\}\"": State.IN_JS},
+                     State.IN_JS_STRING_LITERAL2: {"[^\\\\]\"": State.IN_JS},
                      State.IN_CSS: {"</style>" : State.IN_HTML,
                                     "/\*" : State.IN_CSS_BLOCK_COMMENT,
                                     "'" : State.IN_CSS_STRING_LITERAL1,
@@ -212,11 +212,20 @@ def parseLine(line, inState):
   # If the line is empty, return input data as it's reached it's terminal recursion
   return output, outState
 
-# Takes a tokenless string and alters it based on the contents
+# Takes a tokenless string and alters it based on the contents and the state
 def stateSpecificMasking(line, state):
-  if state == State.IN_CSS_STRING_LITERAL1 or state == State.IN_CSS_STRING_LITERAL2 :
-    line = line.replace(" ", "@")
-  return line # For now just pass back the entire string. Maybe Do things like variable contraction or operator space removal in the future
+  # Remove whitespace around operators in CSS and JS:
+  if state == State.IN_CSS or state == State.IN_JS:
+    operators = ['=',':','-','+','/','*','(',')','[','[','{','}', ';', ',']
+    for op in operators:
+      line = re.sub("\s*"+re.escape(op)+"\s*", op, line)
+  # Can't remember if any of these have special meaning in CSS so only replacing them in JS:
+  if state == State.IN_JS:
+    operators = ['==', '||', '&&', '!']
+    for op in operators:
+      line = re.sub("\s*"+re.escape(op)+"\s*", op, line)
+  # Could get rid of all semicolons at EOL in JS (and just rely on the newline character)?
+  return line
 
 # Returns the (index, and then the value of the lowest number in a list):
 #argmin = lambda ls, maxInt: reduce(lambda indexWithTotal, n: n if n[1]<indexWithTotal[1] and n[0] != -1 else indexWithTotal, enumerate(ls), (-1,maxInt))
