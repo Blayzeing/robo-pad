@@ -19,6 +19,7 @@ import getopt
 from functools import reduce
 from enum import Enum
 import re
+import gzip
 
 class State(Enum):
   IN_HTML                   = 1
@@ -37,9 +38,10 @@ def main(argv):
   USAGE_STRING = "USAGE:\n\nHTML-to-C-strings.y -i <HTML folder path (defaults to '../HTML/'> [-o <output header file name (defaults to 'htmlStrings.h')>]\n"
   htmlFolder = "../HTML/"
   outputFile = "htmlStrings.h"
+  debug = None
   
   try:
-    opts, args = getopt.getopt(argv, "hi:o:")
+    opts, args = getopt.getopt(argv, "hi:o:d:")
   except getopt.GetoptError:
     print (USAGE_STRING)
 
@@ -51,9 +53,14 @@ def main(argv):
       htmlFolder = arg
     elif opt == "-o":
       outputFile = arg
+    elif opt == "-d":
+      debug = arg
 
   if not htmlFolder.endswith("/"):
     htmlFolder = htmlFolder + "/"
+
+  if debug != None and not debug.endswith("/"):
+    debug = debug + "/"
   
   print("Writing to file '%s'..."%outputFile)
   with open(outputFile, "w") as outfile:
@@ -61,23 +68,46 @@ def main(argv):
     print("Looking for files in %s..."%htmlFolder)
     for filename in os.listdir(htmlFolder):
       if filename.endswith(".html") or filename.endswith(".css"):
-        print("Composing file '%s'..."%filename)
+        print("\nComposing file '%s'..."%filename)
         condensedHTML = removeVerbosity(htmlFolder + filename)
-        # Then some code to actually save the file
+        print(condensedHTML)
+        # Create the gzip'd version:
+        compressedHTML = gzip.compress(condensedHTML.encode('utf-8'))
+        # Debug outputs:
+        if debug != None:
+          condensedName = ".".join(filename.split('.')[:-1])+"-condensed."+filename.split('.')[-1]
+          encodedFile = condensedHTML.encode('utf-8')
+          # Condensed html file
+          with open(debug + condensedName, "wb") as chtml:
+            chtml.write(encodedFile)
+            print("[DEBUG] Written condensed html to " + condensedName)
+          compressedName = ".".join(filename.split('.')[:-1])+".gzstr"
+          # Compressed data file
+          with open(debug + compressedName, "wb") as chtml:
+            chtml.write(compressedHTML)
+            print("[DEBUG] Written compressed html to " + compressedName)
+          # Debug compression info readout
+          with open(htmlFolder + filename, 'r') as originalFile:
+            originalFileBytes = (originalFile.read()).encode('utf-8')
+            olen = len(originalFileBytes)
+            compression = 100-len(compressedHTML)/olen * 100
+            condension = 100-len(condensedHTML)/olen * 100
+            print("[DEBUG] Compression levels: {0:.2f}% condensed, {1:.2f}% condensed+compressed".format(condension, compression))
+            print("        Final compressed filesize is {0:.2f}% original size.".format(100-compression))
       else:
         print("Ignoring file '%s'..."%filename)
 
 # Ingests the file and gets rid of unwanted characters
 def removeVerbosity(filepath):
   output = ""
-  state = State.IN_HTML # state variable to track what sort of tokens we'll be parsing
+  state = {"html": State.IN_HTML, "css": State.IN_CSS}[filepath.split('.')[-1]] # state variable to track what sort of tokens we'll be parsing (starts either in HTML or CSS depending on the filename
   with open(filepath) as infile:
     for line in infile:
       result, state = parseLine(line, state)
       #print("RESULT: ", state, result)
       if result.strip() != "":
         output = output + result.strip() + "\n"
-    print(output)
+  return output
 
 RESERVED_WORDS = [] # A list of reserved words from HTML and JS here (See: https://www.w3schools.in/javascript-tutorial/keywords/ )
 
@@ -111,7 +141,7 @@ def parseLine(line, inState):
   output = ""
   outState = inState
 
-  print("PARSING AS "+str(inState)+": ", line)
+  #print("PARSING AS "+str(inState)+": ", line)
 
   if line != "" and len(TRANSITION_TABLE[inState].keys()) > 0:
     # Store the indicies of the first of each of the associated potential transition strings in the line:
@@ -121,7 +151,7 @@ def parseLine(line, inState):
     # Now zip(? don't. Just keep them both as ordered lists) the occurance indicies with the states that they produce,
     # Argmin to find the first (if existing) ocuring match, store the state that implies will be next
     closestIndex, value = argmin(occuranceIndicies, len(line))
-    print("DATA:", "'"+line.strip()+"'\n", "PROCESSING:", list(TRANSITION_TABLE[inState].keys()), occuranceIndicies, closestIndex, value, "END DATA")
+    #print("DATA:", "'"+line.strip()+"'\n", "PROCESSING:", list(TRANSITION_TABLE[inState].keys()), occuranceIndicies, closestIndex, value, "END DATA")
     nextState = inState # For when the state doesn't change
     if closestIndex == -1:
       # None of the strings were found, so set the value to the end of the line

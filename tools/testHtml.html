@@ -1,0 +1,58 @@
+<html class="maxheight">
+<head>
+  <title>ESP8266 Controller</title>
+  <meta content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0' name='viewport' />
+  <style>
+    body {overscroll-behavior-y: contain; padding: 0; margin: 0; background-color: #cccccc; font-family: Arial, Helvetica, Sans-Serif; Color: #000088; }
+    .row {
+	    display: flex;
+    }
+    .column {
+	    flex:50%;
+    }
+    .maxheight {
+      /*In-dot comment
+      end of the comment*/
+	    height: 100%;
+    }
+    .slider{
+      margin: 0 5%;
+      background-color: #aaa;
+      overflow:hidden;
+      words: "Oh my here's a long string!"
+      spookyWords: " and here's an \"escaped string!\" ahhhh! oh no! Oh the humanity!"
+      word-wrap:break-word;
+    }
+    /*out of singleline*/
+    .stick{
+      height: 10%;
+      background-color: #777;
+      position: relative;
+    }
+  </style>
+  <script>
+  var testSocket = null;
+  var eggs = 0;// This is a comment.
+  var safeString = 'safety "of" the string!'
+  var slightString = 'is... \'this (while still having spaces)\' bad?'
+  var regString = "This is a regular double-quote string"
+  var riskyString = "This is a \"risky string\" ha ha ha"
+  var newlineNow = true;
+  var someComplexMaths     = ( (a/1117) * 12 + 567*2 ) /   200;
+  var someMoreComplexLogic = ( this && that ) == !(this^that || (when && how) );
+  </script>
+</head>
+<body class="maxheight">
+<!--<canvas id="controller" width="1000" height="100%"></canvas>-->
+  <div class="row maxheight">
+      <div class="column slider" id="vertSlider1" style="height: 100%" onmousedown="setSlider('vertSlider1');" onmouseup="unsetSlider('vertSlider1');" ontouchstart="setSlider('vertSlider1');" ontouchend="unsetSlider('vertSlider1');">
+      <div class="stick"></div>
+    </div>
+    <div class="column slider" id="vertSlider2" style="height: 100%" onmousedown="setSlider('vertSlider2');" onmouseup="unsetSlider('vertSlider2');" ontouchstart="setSlider('vertSlider2');" ontouchend="unsetSlider('vertSlider2');">
+      <div class="stick"></div>
+    </div>
+  </div>
+</body>
+<body>
+</body>
+</html>
