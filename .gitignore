@@ -2,3 +2,4 @@
 **/*.swp
 **/*.bin
 tools/htmlStrings.h
+tools/debug.out/*
