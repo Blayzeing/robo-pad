@@ -21,6 +21,8 @@ from enum import Enum
 import re
 import gzip
 
+DEBUG = True
+
 class State(Enum):
   IN_HTML                   = 1
   IN_HTML_COMMENT           = 2
@@ -134,14 +136,22 @@ TRANSITION_TABLE = { State.IN_HTML: {"<!--" : State.IN_HTML_COMMENT,
                      State.IN_CSS_STRING_LITERAL2: {"[^\\\\]\"" : State.IN_CSS}
                     }
 COMMENT_STATES = [State.IN_HTML_COMMENT, State.IN_JS_SINGLE_LINE_COMMENT, State.IN_JS_BLOCK_COMMENT, State.IN_CSS_BLOCK_COMMENT]
-COMMENT_STRINGS = ["<!--", "-->", "/\*", "\*/", "//"]
+COMMENT_STRINGS = ["<!--", "-->", "/*", "*/", "//"]
+
+REGEX_TO_LITERAL = {"/\*": "/*", "\*/": "*/", "[^\\\\]'": " '", "[^\\\\]\"": " \""}
+def convertRegexToLiteral(regex):
+    try:
+        return REGEX_TO_LITERAL[regex]
+    except:
+        return regex
 
 # Parses a string and a state variable, processes the string and returns an updated state and resultant string
 def parseLine(line, inState):
   output = ""
   outState = inState
 
-  #print("PARSING AS "+str(inState)+": ", line)
+  if DEBUG:
+    print("PARSING AS "+str(inState)+": ", line)
 
   if line != "" and len(TRANSITION_TABLE[inState].keys()) > 0:
     # Store the indicies of the first of each of the associated potential transition strings in the line:
@@ -151,7 +161,8 @@ def parseLine(line, inState):
     # Now zip(? don't. Just keep them both as ordered lists) the occurance indicies with the states that they produce,
     # Argmin to find the first (if existing) ocuring match, store the state that implies will be next
     closestIndex, value = argmin(occuranceIndicies, len(line))
-    #print("DATA:", "'"+line.strip()+"'\n", "PROCESSING:", list(TRANSITION_TABLE[inState].keys()), occuranceIndicies, closestIndex, value, "END DATA")
+    if DEBUG:
+        print("DATA:", "'"+line.strip()+"'\n", "PROCESSING:", list(TRANSITION_TABLE[inState].keys()), occuranceIndicies, closestIndex, value, "END DATA")
     nextState = inState # For when the state doesn't change
     if closestIndex == -1:
       # None of the strings were found, so set the value to the end of the line
@@ -161,6 +172,9 @@ def parseLine(line, inState):
       #print("State transition found!", nextState)
     # Process (depending on state [write/don't write, eliminate spaces etc]) the stuff up until and including (depending on if the previous state or next state is a COMMENT_STATE) the first match
     tokenString = list(TRANSITION_TABLE[inState].keys())[closestIndex]
+    tokenString = convertRegexToLiteral(tokenString)
+    if DEBUG:
+        print("FOUND TOKEN: " + tokenString)
     leftHalf = line[:value + (len(tokenString) if tokenString not in COMMENT_STRINGS else 0)]# The string up to and including the transition string (if it's not a comment)
     rightHalf = line[value + len(tokenString):]# The remaining half of the line (excluding the transition string)
     
