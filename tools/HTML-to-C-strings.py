@@ -99,7 +99,7 @@ def main(argv):
           
           print(" Saving to file...")
           lines = condensedHTML.split("\n")
-          lines = list(map(lambda n: n.replace("\\", "\\\\").replace("\"", "\\\""), lines))
+          lines = list(map(lambda n: n.replace("\\", "\\\\").replace("\"", "\\\"") + "\\n", lines))
           outfile.write("const char " + ".".join(filename.split(".")[:-1]).upper() + "[] = \"" + lines[0] + "\\\n")
           for line in lines[1:-1]:
             outfile.write(line + "\\\n")
