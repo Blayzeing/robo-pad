@@ -66,6 +66,8 @@ def main(argv):
   
   print("Writing to file '%s'..."%outputFile)
   with open(outputFile, "w") as outfile:
+    outfile.write("#ifndef HTML_STRINGS_H\n")
+    outfile.write("#define HTML_STRINGS_H\n")
 
     print("Looking for files in %s..."%htmlFolder)
     for filename in os.listdir(htmlFolder):
@@ -96,8 +98,17 @@ def main(argv):
             condension = 100-len(condensedHTML)/olen * 100
             print("[DEBUG] Compression levels: {0:.2f}% condensed, {1:.2f}% condensed+compressed".format(condension, compression))
             print("        Final compressed filesize is {0:.2f}% original size.".format(100-compression))
+          
+          print(" Saving to file...")
+          lines = condensedHTML.split("\n")
+          lines = list(map(lambda n: n.replace("\\", "\\\\").replace("\"", "\\\"") + "\\n", lines))
+          outfile.write("const char " + ".".join(filename.split(".")[:-1]).upper() + "[] = \"" + lines[0] + "\\\n")
+          for line in lines[1:-1]:
+            outfile.write(line + "\\\n")
+          outfile.write(lines[-1] + "\";\n")
       else:
         print("Ignoring file '%s'..."%filename)
+    outfile.write("#endif")
 
 # Ingests the file and gets rid of unwanted characters
 def removeVerbosity(filepath):
