@@ -158,7 +158,6 @@ def parseLine(line, inState):
     #occuranceIndicies = [line.find(k) for k in TRANSITION_TABLE[inState].keys()]
     occuranceIndicies = [re.search(k, line) for k in TRANSITION_TABLE[inState].keys()] # Use regex instead of find
     occuranceIndicies = list(map(lambda n: -1 if n == None else n.span()[0], occuranceIndicies))# Convert Nones to -1s so that the next bit works
-    # Now zip(? don't. Just keep them both as ordered lists) the occurance indicies with the states that they produce,
     # Argmin to find the first (if existing) ocuring match, store the state that implies will be next
     closestIndex, value = argmin(occuranceIndicies, len(line))
     if DEBUG:
