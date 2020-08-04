@@ -37,6 +37,15 @@
   var slightString = 'is... \'this (while still having spaces)\' bad?'
   var regString = "This is a regular double-quote string"
   var riskyString = "This is a \"risky string\" ha ha ha"
+
+///////// UI ELEMENTS
+
+    lookuptable = {"vertSlider1":2,"vertSlider2":3};
+
+    // This slider should probably be a class, allowing for universal configurations such as slider reset to be made there instead of in-code.
+    // Can probably transfer the setting of all those onmousedown etc stuff there too...
+    var sliderWidth = 10;//percent
+    var midpoint = (50-sliderWidth/2)+"%";
   var newlineNow = true;
   var someComplexMaths     = ( (a/1117) * 12 + 567*2 ) /   200;
   var someMoreComplexLogic = ( this && that ) == !(this^that || (when && how) );

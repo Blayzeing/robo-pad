@@ -14,7 +14,7 @@
 //#define PPM_MIXING
 #define DEBUG
 
-const char* ssid = "robo-pad";
+const char* ssid = "robo-pad-dev";
 const char* password = "roboteers";
 const char* VERSION_NUMBER = "1.4b";
 const char* SAFEBOOT_HTML = "ROBOPAD IS IN SAFEBOOT MODE, CLICK <a href='update'>HERE</a> TO UPLOAD NEW FIRMWARE.";
