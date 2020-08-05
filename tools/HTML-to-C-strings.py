@@ -21,7 +21,7 @@ from enum import Enum
 import re
 import gzip
 
-DEBUG = True
+DEBUG = False
 
 class State(Enum):
   IN_HTML                   = 1
@@ -37,13 +37,13 @@ class State(Enum):
   IN_CSS_STRING_LITERAL2    = 11 # "
 
 def main(argv):
-  USAGE_STRING = "USAGE:\n\nHTML-to-C-strings.y -i <HTML folder path (defaults to '../HTML/')> [-o <output header file name (defaults to 'htmlStrings.h')> | -d <path to debug output folder>]\n"
+  USAGE_STRING = "USAGE:\n\nHTML-to-C-strings.y -i <HTML folder path (defaults to '../HTML/')> [-o <output header file name (defaults to 'htmlStrings.h')> | -d <path to debug output folder> | -v]\n"
   htmlFolder = "../HTML/"
   outputFile = "htmlStrings.h"
   debug = None
   
   try:
-    opts, args = getopt.getopt(argv, "hi:o:d:")
+    opts, args = getopt.getopt(argv, "hi:o:d:v")
   except getopt.GetoptError:
     print (USAGE_STRING)
 
@@ -57,6 +57,9 @@ def main(argv):
       outputFile = arg
     elif opt == "-d":
       debug = arg
+    elif opt == "-v":
+      global DEBUG
+      DEBUG = True
 
   if not htmlFolder.endswith("/"):
     htmlFolder = htmlFolder + "/"
