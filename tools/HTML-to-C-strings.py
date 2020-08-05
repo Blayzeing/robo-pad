@@ -36,6 +36,7 @@ class State(Enum):
   IN_CSS_STRING_LITERAL1    = 10 # '
   IN_CSS_STRING_LITERAL2    = 11 # "
 
+# Converts a camel-case filename (eg /some/place/fileName.html) to a constant-style capitalized name (eg 'FILE_NAME') for guard and variable construction.
 def filepathToVariable(filepath):
   output = ".".join(filepath.split("/")[-1].split(".")[:-1]).replace(".", "_")
   for find in re.findall("[a-z][A-Z]", output):
