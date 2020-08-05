@@ -36,6 +36,13 @@ class State(Enum):
   IN_CSS_STRING_LITERAL1    = 10 # '
   IN_CSS_STRING_LITERAL2    = 11 # "
 
+def filepathToVariable(filepath):
+  output = ".".join(filepath.split("/")[-1].split(".")[:-1]).replace(".", "_")
+  for find in re.findall("[a-z][A-Z]", output):
+    output = output.replace(find, str(find[0] + "_" + find[1]))
+  output = output.upper()
+  return output
+
 def main(argv):
   USAGE_STRING = "USAGE:\n\nHTML-to-C-strings.y -i <HTML folder path (defaults to '../HTML/')> [-o <output header file name (defaults to 'htmlStrings.h')> | -d <path to debug output folder> | -v]\n"
   htmlFolder = "../HTML/"
@@ -72,11 +79,7 @@ def main(argv):
   
   print("Writing to file '%s'..."%outputFile)
   with open(outputFile, "w") as outfile:
-    #######################################################################################TODO: The below code should be a function that can then be used on variable names: takes in a filename, outputs a capitalized underscored variable name.
-    guard = ".".join(outputFile.split("/")[-1].split(".")[:-1]).replace(".", "_")
-    for find in re.findall("[a-z][A-Z]", guard):
-      guard = guard.replace(find, str(find[0] + "_" + find[1]))
-    guard = guard.upper()
+    guard = filepathToVariable(outputFile)
     outfile.write("#ifndef "+guard+"_H\n")
     outfile.write("#define "+guard+"_H\n")
 
@@ -114,7 +117,7 @@ def main(argv):
         print(" Adding condensed HTML to c file...")
         lines = condensedHTML.split("\n")
         lines = list(map(lambda n: n.replace("\\", "\\\\").replace("\"", "\\\"") + "\\n", lines))
-        outfile.write("const char " + ".".join(filename.split(".")[:-1]).upper() + "[] = \"" + lines[0] + "\\\n")
+        outfile.write("const char " + filepathToVariable(filename) + "[] = \"" + lines[0] + "\\\n")
         for line in lines[1:-1]:
           outfile.write(line + "\\\n")
         outfile.write(lines[-1] + "\";\n")
