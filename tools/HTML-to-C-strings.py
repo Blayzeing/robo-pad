@@ -21,7 +21,7 @@ from enum import Enum
 import re
 import gzip
 
-DEBUG = True
+DEBUG = False
 
 class State(Enum):
   IN_HTML                   = 1
@@ -36,14 +36,22 @@ class State(Enum):
   IN_CSS_STRING_LITERAL1    = 10 # '
   IN_CSS_STRING_LITERAL2    = 11 # "
 
+# Converts a camel-case filename (eg /some/place/fileName.html) to a constant-style capitalized name (eg 'FILE_NAME') for guard and variable construction.
+def filepathToVariable(filepath):
+  output = ".".join(filepath.split("/")[-1].split(".")[:-1]).replace(".", "_")
+  for find in re.findall("[a-z][A-Z]", output):
+    output = output.replace(find, str(find[0] + "_" + find[1]))
+  output = output.upper()
+  return output
+
 def main(argv):
-  USAGE_STRING = "USAGE:\n\nHTML-to-C-strings.y -i <HTML folder path (defaults to '../HTML/'> [-o <output header file name (defaults to 'htmlStrings.h')>]\n"
+  USAGE_STRING = "USAGE:\n\nHTML-to-C-strings.y -i <HTML folder path (defaults to '../HTML/')> [-o <output header file name (defaults to 'htmlStrings.h')> | -d <path to debug output folder> | -v]\n"
   htmlFolder = "../HTML/"
   outputFile = "htmlStrings.h"
   debug = None
   
   try:
-    opts, args = getopt.getopt(argv, "hi:o:d:")
+    opts, args = getopt.getopt(argv, "hi:o:d:v")
   except getopt.GetoptError:
     print (USAGE_STRING)
     sys.exit()
@@ -58,25 +66,34 @@ def main(argv):
       outputFile = arg
     elif opt == "-d":
       debug = arg
+    elif opt == "-v":
+      global DEBUG
+      DEBUG = True
 
   if not htmlFolder.endswith("/"):
     htmlFolder = htmlFolder + "/"
+
+  if not outputFile.endswith(".h"):
+    outputFile = outputFile + ".h"
 
   if debug != None and not debug.endswith("/"):
     debug = debug + "/"
   
   print("Writing to file '%s'..."%outputFile)
   with open(outputFile, "w") as outfile:
-    outfile.write("#ifndef HTML_STRINGS_H\n")
-    outfile.write("#define HTML_STRINGS_H\n")
+    guard = filepathToVariable(outputFile)
+    outfile.write("#ifndef "+guard+"_H\n")
+    outfile.write("#define "+guard+"_H\n")
 
     print("Looking for files in %s..."%htmlFolder)
     for filename in os.listdir(htmlFolder):
       if filename.endswith(".html") or filename.endswith(".css"):
         print("\nComposing file '%s'..."%filename)
+        print(" Condensing...")
         condensedHTML = removeVerbosity(htmlFolder + filename)
-        print(condensedHTML)
+        #print(condensedHTML)
         # Create the gzip'd version:
+        print(" Compressing...")
         compressedHTML = gzip.compress(condensedHTML.encode('utf-8'))
         # Debug outputs:
         if debug != None:
@@ -85,28 +102,27 @@ def main(argv):
           # Condensed html file
           with open(debug + condensedName, "wb") as chtml:
             chtml.write(encodedFile)
-            print("[DEBUG] Written condensed html to " + condensedName)
+            print(" [DEBUG] Written condensed html to " + condensedName)
           compressedName = ".".join(filename.split('.')[:-1])+".gzstr"
           # Compressed data file
           with open(debug + compressedName, "wb") as chtml:
             chtml.write(compressedHTML)
-            print("[DEBUG] Written compressed html to " + compressedName)
+            print(" [DEBUG] Written compressed html to " + compressedName)
           # Debug compression info readout
           with open(htmlFolder + filename, 'r') as originalFile:
             originalFileBytes = (originalFile.read()).encode('utf-8')
             olen = len(originalFileBytes)
             compression = 100-len(compressedHTML)/olen * 100
             condension = 100-len(condensedHTML)/olen * 100
-            print("[DEBUG] Compression levels: {0:.2f}% condensed, {1:.2f}% condensed+compressed".format(condension, compression))
-            print("        Final compressed filesize is {0:.2f}% original size.".format(100-compression))
-          
-          print(" Saving to file...")
-          lines = condensedHTML.split("\n")
-          lines = list(map(lambda n: n.replace("\\", "\\\\").replace("\"", "\\\"") + "\\n", lines))
-          outfile.write("const char " + ".".join(filename.split(".")[:-1]).upper() + "[] = \"" + lines[0] + "\\\n")
-          for line in lines[1:-1]:
-            outfile.write(line + "\\\n")
-          outfile.write(lines[-1] + "\";\n")
+            print(" [DEBUG] Compression levels: {0:.2f}% condensed, {1:.2f}% condensed+compressed".format(condension, compression))
+            print("         Final compressed filesize is {0:.2f}% original size.".format(100-compression))
+        print(" Adding condensed HTML to c file...")
+        lines = condensedHTML.split("\n")
+        lines = list(map(lambda n: n.replace("\\", "\\\\").replace("\"", "\\\"") + "\\n", lines))
+        outfile.write("const char " + filepathToVariable(filename) + "[] = \"" + lines[0] + "\\\n")
+        for line in lines[1:-1]:
+          outfile.write(line + "\\\n")
+        outfile.write(lines[-1] + "\";\n")
       else:
         print("Ignoring file '%s'..."%filename)
     outfile.write("#endif")
