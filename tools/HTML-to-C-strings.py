@@ -120,7 +120,7 @@ def main(argv):
         print(" Adding condensed HTML to c file...")
         lines = condensedHTML.split("\n")
         lines = list(map(lambda n: n.replace("\\", "\\\\").replace("\"", "\\\"") + "\\n", lines))
-        outfile.write(SEPARATOR+"\nconst char " + filepathToVariable(filename) + "[] = \"" + lines[0] + "\\\n")
+        outfile.write(SEPARATOR+"\nconst char " + filepathToVariable(filename) + '_' + filename.split('.')[-1].upper() + "[] = \"" + lines[0] + "\\\n")
         for line in lines[1:-1]:
           outfile.write(line + "\\\n")
         outfile.write(lines[-1] + "\";\n")
