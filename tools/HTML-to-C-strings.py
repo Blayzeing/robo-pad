@@ -36,6 +36,7 @@ class State(Enum):
   IN_CSS_BLOCK_COMMENT      = 9
   IN_CSS_STRING_LITERAL1    = 10 # '
   IN_CSS_STRING_LITERAL2    = 11 # "
+  IN_CSS_BRACE_BLOCK        = 12
 
 # Converts a camel-case filename (eg /some/place/fileName.html) to a constant-style capitalized name (eg 'FILE_NAME') for guard and variable construction.
 def filepathToVariable(filepath):
@@ -159,10 +160,12 @@ TRANSITION_TABLE = { State.IN_HTML: {"<!--" : State.IN_HTML_COMMENT,
                      State.IN_CSS: {"</style>" : State.IN_HTML,
                                     "/\*" : State.IN_CSS_BLOCK_COMMENT,
                                     "'" : State.IN_CSS_STRING_LITERAL1,
-                                    "\"" : State.IN_CSS_STRING_LITERAL2},
+                                    "\"" : State.IN_CSS_STRING_LITERAL2,
+                                    "{": State.IN_CSS_BRACE_BLOCK},
                      State.IN_CSS_BLOCK_COMMENT: {"\*/" : State.IN_CSS},
                      State.IN_CSS_STRING_LITERAL1: {"[^\\\\]'" : State.IN_CSS},
-                     State.IN_CSS_STRING_LITERAL2: {"[^\\\\]\"" : State.IN_CSS}
+                     State.IN_CSS_STRING_LITERAL2: {"[^\\\\]\"" : State.IN_CSS},
+                     State.IN_CSS_BRACE_BLOCK: {"}" : State.IN_CSS}
                     }
 COMMENT_STATES = [State.IN_HTML_COMMENT, State.IN_JS_SINGLE_LINE_COMMENT, State.IN_JS_BLOCK_COMMENT, State.IN_CSS_BLOCK_COMMENT]
 COMMENT_STRINGS = ["<!--", "-->", "/*", "*/", "//"]
@@ -230,6 +233,9 @@ def stateSpecificMasking(line, state):
     operators = ['==', '||', '&&', '!']
     for op in operators:
       line = re.sub("\s*"+re.escape(op)+"\s*", op, line)
+  # Remove newlines in CSS tag bodies # Eh, nah, that'd take doing all that other stuff.
+  #if state == State.IN_CSS_BRACE_BLOCK:
+  #  line = line.rstrip()
   # Could get rid of all semicolons at EOL in JS (and just rely on the newline character)?
   # Could store JS variable names and replace them out with shorter ones as and when they're referred to (watch the variables referenced in HTML though :/)
   return line
