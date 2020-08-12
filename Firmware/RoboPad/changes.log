@@ -1,3 +1,10 @@
+[2020-08-12] 1.5b
+ - Actually fixes Bug where by overscroll wasn't disabled on iOS devices and the ui drifted around the screen as you moved the joysticks
+
+[2020-08-12] 1.5a
+ - Begins the transition toward a more fixed-pipeline design
+ - Separates out all HTML code to htmlStrings.h
+
 [2019-11-09] 1.4a
  - Adds PPM support via the PPM and PPM_MIXING defines, which can be uncommented. Feature written by edwardatki.
 

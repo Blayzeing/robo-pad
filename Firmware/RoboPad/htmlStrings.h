@@ -3,42 +3,52 @@
 //===========================================================
 const char SPINNAH_CONTROLLER_HTML[] = "<html class=\"maxheight\">\n\
 <head>\n\
-<title>ESP8266 Controller</title>\n\
+<title>Joystick Controller</title>\n\
 <meta content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0' name='viewport' />\n\
 <style>\n\
-body{overscroll-behavior-y:contain;padding:0;margin:0;background-color:#cccccc;font-family:Arial,Helvetica,Sans-Serif;Color:#000088;}\n\
+body{\n\
+touch-action: none;\n\
+-webkit-overflow-scrolling: none;\n\
+overflow:hidden;\n\
+overscroll-behavior: none;\n\
+padding: 0;\n\
+margin: 0;\n\
+background-color: #cccccc;\n\
+font-family: Arial, Helvetica, Sans-Serif;\n\
+Color: #000088;\n\
+}\n\
 .row{\n\
-display:flex;\n\
+display: flex;\n\
 }\n\
 .column{\n\
 flex:50%;\n\
 }\n\
 .maxheight{\n\
-height:100%;\n\
+height: 100%;\n\
 }\n\
 .slider{\n\
-margin:0 5%;\n\
-background-color:#aaa;\n\
+margin: 0 5%;\n\
+background-color: #aaa;\n\
 overflow:hidden;\n\
 word-wrap:break-word;\n\
 }\n\
 .joystick{\n\
-margin:0 5%;\n\
-background-color:#aaa;\n\
+margin: 0 5%;\n\
+background-color: #aaa;\n\
 overflow:hidden;\n\
 word-wrap:break-word;\n\
 }\n\
 .wideStick{\n\
-height:10%;\n\
-width:100%;\n\
-background-color:#777;\n\
-position:relative;\n\
+height: 10%;\n\
+width: 100%;\n\
+background-color: #777;\n\
+position: relative;\n\
 }\n\
 .stick{\n\
-height:10%;\n\
-width:10%;\n\
-background-color:#777;\n\
-position:relative;\n\
+height: 10%;\n\
+width: 10%;\n\
+background-color: #777;\n\
+position: relative;\n\
 }\n\
 </style>\n\
 <script>\n\
@@ -185,29 +195,39 @@ if(document.getElementById)window.onload=initConnection;\n\
 //===========================================================
 const char TANK_DRIVE_CONTROLLER_HTML[] = "<html class=\"maxheight\">\n\
 <head>\n\
-<title>ESP8266 Controller</title>\n\
+<title>Tank Drive Controller</title>\n\
 <meta content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0' name='viewport' />\n\
 <style>\n\
-body{overscroll-behavior-y:contain;padding:0;margin:0;background-color:#cccccc;font-family:Arial,Helvetica,Sans-Serif;Color:#000088;}\n\
+body{\n\
+touch-action: none;\n\
+-webkit-overflow-scrolling: none;\n\
+overflow:hidden;\n\
+overscroll-behavior: none;\n\
+padding: 0;\n\
+margin: 0;\n\
+background-color: #cccccc;\n\
+font-family: Arial, Helvetica, Sans-Serif;\n\
+Color: #000088;\n\
+}\n\
 .row{\n\
-display:flex;\n\
+display: flex;\n\
 }\n\
 .column{\n\
 flex:50%;\n\
 }\n\
 .maxheight{\n\
-height:100%;\n\
+height: 100%;\n\
 }\n\
 .slider{\n\
-margin:0 5%;\n\
-background-color:#aaa;\n\
+margin: 0 5%;\n\
+background-color: #aaa;\n\
 overflow:hidden;\n\
 word-wrap:break-word;\n\
 }\n\
 .stick{\n\
-height:10%;\n\
-background-color:#777;\n\
-position:relative;\n\
+height: 10%;\n\
+background-color: #777;\n\
+position: relative;\n\
 }\n\
 </style>\n\
 <script>\n\

@@ -1,9 +1,21 @@
 <html class="maxheight">
 <head>
-  <title>ESP8266 Controller</title>
+  <title>Joystick Controller</title>
   <meta content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0' name='viewport' />
   <style>
-    body { overscroll-behavior-y: contain; padding: 0; margin: 0; background-color: #cccccc; font-family: Arial, Helvetica, Sans-Serif; Color: #000088; }
+    body {
+      /* Stupid bits I had to add because of poor overscroll-behavior support in iOS */
+      touch-action: none;
+      -webkit-overflow-scrolling: none;
+      overflow:hidden;
+      /* The bit that works in every other browser */
+      overscroll-behavior: none;
+      padding: 0;
+      margin: 0;
+      background-color: #cccccc;
+      font-family: Arial, Helvetica, Sans-Serif;
+      Color: #000088;
+    }
     .row {
 	    display: flex;
     }

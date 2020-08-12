@@ -16,7 +16,7 @@
 
 const char* ssid = "robo-pad-dev";
 const char* password = "roboteers";
-const char* VERSION_NUMBER = "1.5a";
+const char* VERSION_NUMBER = "1.5b";
 const char* SAFEBOOT_HTML = "ROBOPAD IS IN SAFEBOOT MODE, CLICK <a href='update'>HERE</a> TO UPLOAD NEW FIRMWARE.";
 const char* HOME_HTML_FORMAT = "version: %s<br><a href='tankDrive'>Tank Drive Controller</a><br><a href='spinner'>Joystick Controller</a><br><a href='update'>updater</a>\0";
 char home_html[200];
