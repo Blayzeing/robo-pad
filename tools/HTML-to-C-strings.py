@@ -22,7 +22,8 @@ import re
 import gzip
 
 DEBUG = False
-SEPARATOR = "//==========================================================="
+SEPARATOR = "//===========================================================" # Separator string for output header files
+HEX_CHARS_PER_LINE = 20 # The number of hex characters to put on each line of the compressed HTML header file
 
 class State(Enum):
   IN_HTML                   = 1
@@ -47,13 +48,20 @@ def filepathToVariable(filepath):
   return output
 
 def main(argv):
-  USAGE_STRING = "USAGE:\n\nHTML-to-C-strings.y -i <HTML folder path (defaults to '../HTML/')> [-o <output header file name (defaults to 'htmlStrings.h')> | -d <path to debug output folder> | -v]\n"
+  USAGE_STRING = """USAGE:\n\nHTML-to-C-strings.y -i <HTML folder path (defaults to '../HTML/')> [-o <output header file name (defaults to 'htmlStrings.h')> | -d <path to debug output folder> | -v | -c]\n\n
+                      -i  The input folder that stores HTML files
+                      -o  The output header file name
+                      -d  Path to a folder to store debug output
+                      -v  Enable verbose DEBUG output, shows tokens as they are parsed
+                      -c  Enable compressed HTML string saving (will save to the output header file name + "-compressed.h")
+                 """
   htmlFolder = "../HTML/"
   outputFile = "htmlStrings.h"
+  compressedFile = None
   debug = None
   
   try:
-    opts, args = getopt.getopt(argv, "hi:o:d:v")
+    opts, args = getopt.getopt(argv, "hi:o:d:vc")
   except getopt.GetoptError:
     print (USAGE_STRING)
     sys.exit()
@@ -78,6 +86,9 @@ def main(argv):
   if not outputFile.endswith(".h"):
     outputFile = outputFile + ".h"
 
+  for opt, arg in opts:
+      compressedFile = ".".join(outputFile.split(".")[:-1]) + "-compressed.h"
+
   if debug != None and not debug.endswith("/"):
     debug = debug + "/"
   
@@ -86,6 +97,11 @@ def main(argv):
     guard = filepathToVariable(outputFile)
     outfile.write("#ifndef "+guard+"_H\n")
     outfile.write("#define "+guard+"_H\n")
+
+    if(compressedFile):
+      compressedFile = open(compressedFile, "w")
+      compressedFile.write("#ifndef "+guard+"_COMPRESSED_H\n")
+      compressedFile.write("#define "+guard+"_COMPRESSED_H\n")
 
     print("Looking for files in %s..."%htmlFolder)
     for filename in os.listdir(htmlFolder):
@@ -118,16 +134,28 @@ def main(argv):
             condension = 100-len(condensedHTML)/olen * 100
             print(" [DEBUG] Compression levels: {0:.2f}% condensed, {1:.2f}% condensed+compressed".format(condension, compression))
             print("         Final compressed filesize is {0:.2f}% original size.".format(100-compression))
+
         print(" Adding condensed HTML to c file...")
         lines = condensedHTML.split("\n")
         lines = list(map(lambda n: n.replace("\\", "\\\\").replace("\"", "\\\"") + "\\n", lines))
-        outfile.write(SEPARATOR+"\nconst char " + filepathToVariable(filename) + '_' + filename.split('.')[-1].upper() + "[] = \"" + lines[0] + "\\\n")
+        variableName = filepathToVariable(filename) + '_' + filename.split('.')[-1].upper()
+        outfile.write(SEPARATOR+"\nconst char " + variableName + "[] = \"" + lines[0] + "\\\n")
         for line in lines[1:-1]:
           outfile.write(line + "\\\n")
         outfile.write(lines[-1] + "\";\n")
+
+        if(compressedFile):
+          print(" Adding compressed HTML to c file...")
+          byteArray = "{" + ", ".join([("\n" if index%HEX_CHARS_PER_LINE == 0 else "") + str(hex(byte)) for (index, byte) in enumerate(compressedHTML)]) + "\n};"
+          compressedFile.write("\nconst char " + variableName + "[] = " + byteArray +"\n")
+          compressedFile.write("const size_t %s_SIZE = %i;\n"%(variableName, len(compressedHTML)))
+        
       else:
         print("Ignoring file '%s'..."%filename)
     outfile.write("#endif")
+    if(compressedFile):
+      compressedFile.write("#endif")
+      compressedFile.close()
 
 # Ingests the file and gets rid of unwanted characters
 def removeVerbosity(filepath):
