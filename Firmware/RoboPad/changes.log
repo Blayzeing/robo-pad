@@ -1,3 +1,6 @@
+[2020-08-27] 1.6a
+ - Introduces compressed HTML data
+
 [2020-08-12] 1.5b
  - Actually fixes Bug where by overscroll wasn't disabled on iOS devices and the ui drifted around the screen as you moved the joysticks
 
