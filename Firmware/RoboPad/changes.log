@@ -1,3 +1,8 @@
+[2020-09-01] 1.6b
+ - Moves compressed HTML data over to ROM
+ - Moves HTTP response string partial over to ROM
+ - Compressed HTML now stored directly as uint8_t
+
 [2020-08-27] 1.6a
  - Introduces compressed HTML data
 

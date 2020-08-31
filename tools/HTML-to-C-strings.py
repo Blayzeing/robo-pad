@@ -147,7 +147,7 @@ def main(argv):
         if(compressedFile):
           print(" Adding compressed HTML to c file...")
           byteArray = "{" + ", ".join([("\n" if index%HEX_CHARS_PER_LINE == 0 else "") + str(hex(byte)) for (index, byte) in enumerate(compressedHTML)]) + "\n};"
-          compressedFile.write("\nconst char " + variableName + "[] = " + byteArray +"\n")
+          compressedFile.write("\nconst uint8_t " + variableName + "[] PROGMEM = " + byteArray +"\n")
           compressedFile.write("const size_t %s_SIZE = %i;\n"%(variableName, len(compressedHTML)))
         
       else:
