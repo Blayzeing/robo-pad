@@ -1,15 +1,14 @@
-// GENERATOR: The below will have to change depending on features used (Arduino, by default will not allow any web stuff, only reciever data)
 #include <ESP8266WebServer.h>
 #include <WebSocketsServer.h>
 
 #include <ESP8266WiFi.h>
 #include <ESP8266HTTPUpdateServer.h>
-#include <ESP8266WiFi.h>
 
 #include <Servo.h>
 
 #include "htmlStrings-compressed.h"
 #include "RoboPadCore.h"
+#include "ConfigManager.h"
 
 //#define PPM
 //#define PPM_MIXING
@@ -18,8 +17,9 @@
 const char* ssid = "robo-pad-dev";
 const char* password = "roboteers";
 const char* VERSION_NUMBER = "1.6b";
-const char* SAFEBOOT_HTML = "ROBOPAD IS IN SAFEBOOT MODE, CLICK <a href='update'>HERE</a> TO UPLOAD NEW FIRMWARE.";
-const char* ENCODING_ERROR = "Error: Unfortunately, RoboPad does not support devices that do not support gzip encoding.";
+#define SAFEBOOT_HTML F("ROBOPAD IS IN SAFEBOOT MODE, CLICK <a href='update'>HERE</a> TO UPLOAD NEW FIRMWARE.")
+#define ENCODING_ERROR F("Error: Unfortunately, RoboPad does not support devices that do not support gzip encoding.")
+
 const char* HOME_HTML_FORMAT = "version: %s<br><a href='tankDrive'>Tank Drive Controller</a><br><a href='spinner'>Joystick Controller</a><br><a href='update'>updater</a>\0";
 char home_html[200];
 
@@ -44,29 +44,73 @@ WebSocketsServer webSocketServer = WebSocketsServer(81);
 //For spinner
 Servo esc;
 
+ConfigManager configManager;
+
 void setup() {
   
   // Setting up Serial and access point
   Serial.begin(115200);
   Serial.println();
-  Serial.println("Booting Sketch...");
+  Serial.println(F("Booting Sketch..."));
   for(uint8_t t = 4; t > 0; t--) {
         Serial.printf("[SETUP] BOOT WAIT %d...\n", t);
         Serial.flush();
         delay(1000);
   }
 
-  Serial.print("version: ");
+#ifdef DEBUG
+//  // Checks for fletcher checksum functionality (mostly future-proofing)
+//  Serial.print("Wrap-around confirmation (should equal 0): ");
+//  uint8_t checkValue1 = 255;
+//  Serial.println(++checkValue1);
+//  Serial.println("Debug fletcher check-byte processing check:");
+//  checkValue1 = 0;
+//  uint8_t checkValue2 = 0;
+//  char testString0[] = "abcde";
+//  char testString1[] = "abcdef";
+//  char testString2[] = "abcdefgh";
+//  size_t i;
+//  for (i = 0; i<5; i++)
+//    ConfigManager::ConfigData::fletcherProcessByte((uint8_t)testString0[i], checkValue1, checkValue2);
+//  Serial.println("\tExpected:\t");
+//  Serial.print("\tReturned:\t");
+//  Serial.print(checkValue1, HEX);
+//  Serial.print("\t");
+//  Serial.print(checkValue2, HEX);
+//  Serial.println();
+//  checkValue1 = 0; checkValue2 = 0;
+//
+//  for (i = 0; i<6; i++)
+//    ConfigManager::ConfigData::fletcherProcessByte((uint8_t)testString1[i], checkValue1, checkValue2);
+//  Serial.println("\tExpected:\t");
+//  Serial.print("\tReturned:\t");
+//  Serial.print(checkValue1, HEX);
+//  Serial.print("\t");
+//  Serial.print(checkValue2, HEX);
+//  Serial.println();
+//  checkValue1 = 0; checkValue2 = 0;
+//  //for (i = 0; i<6; i++)
+//  //  ConfigManager::ConfigData::fletcherProcessByte((uint8_t)testString1[i], checkValue1, checkValue2);
+//  //checkValue1 = 0; checkValue2 = 0;
+//  //for (i = 0; i<8; i++)
+//  //  ConfigManager::ConfigData::fletcherProcessByte((uint8_t)testString2[i], checkValue1, checkValue2);
+#endif
+
+  Serial.print(F("version: "));
   Serial.println(VERSION_NUMBER);
+
+  // Load the user config
+  Serial.println(F("Attempting to load saved configuration..."));
+  configManager.loadFromEEPROM();
   
   // Setting up the updater
-  Serial.println("Initialising OTA updater...");
+  Serial.println(F("Initialising OTA updater..."));
   httpUpdater.setup(&httpServer);
-  Serial.println("Starting access point...");
+  Serial.println(F("Starting access point..."));
   // Set up the http webserver in AP mode:
   WiFi.softAP(ssid, password);
   
-  Serial.println("Checking safeboot...");
+  Serial.println(F("Checking safeboot..."));
   pinMode(SAFEBOOT_PIN, INPUT);
   /*if(digitalRead(SAFEBOOT_PIN) == 1)
   {
@@ -77,23 +121,27 @@ void setup() {
     return;
   }*/
 
+  // Set up the websocket server:
+  Serial.println(F("Booting Websocket server..."));
+  webSocketServer.begin();
+  webSocketServer.onEvent(webSocketEvent);
+  Serial.println(F("WebSocket server started."));
+
   // Configure the page listeners
+  Serial.println(F("Booting web server..."));
   const char* headerKeys[] = {"Accept-Encoding"};
   httpServer.collectHeaders(headerKeys, 1);
   sprintf(home_html, HOME_HTML_FORMAT, VERSION_NUMBER);
   httpServer.on("/", handleConnection);
   httpServer.on("/tankDrive", handleTankDriveController);
   httpServer.on("/spinner", handleSpinnerController);
+  httpServer.on("/info", handleInfo);
   httpServer.begin();
   IPAddress myIP = WiFi.softAPIP();
-  Serial.print("HTTPUpdateServer ready! Open http://");
+  Serial.print(F("Webserver ready! Open http://"));
   Serial.print(myIP);
-  Serial.print(" in your browser.\n");
+  Serial.println(F(" in your browser."));
 
-  // Set up the websocket server:
-  webSocketServer.begin();
-  webSocketServer.onEvent(webSocketEvent);
-  Serial.println("WebSocket server started.");
 
   // Configure IO
   configureIO();
@@ -176,7 +224,7 @@ void loop() {
 /// HTTP METHODS
 void handleSafeboot() {
   #ifdef DEBUG
-  Serial.println("HTTP '/' Request recieved while in safemode.");
+  Serial.println(F("HTTP '/' Request recieved while in safemode."));
   #endif
   httpServer.send(200, "text/html", SAFEBOOT_HTML);
 }
@@ -193,14 +241,14 @@ void sendCompressedHTML(const uint8_t* compressedHTML, size_t stringLength)
   if(httpServer.hasHeader("Accept-Encoding"))
   {
     #ifdef DEBUG
-    Serial.println("Client accepts encodings:");
+    Serial.println(F("Client accepts encodings:"));
     Serial.println(httpServer.header("Accept-Encoding"));
     #endif
     if(httpServer.header("Accept-Encoding").indexOf("gzip")==-1)
     {
       // Return error
       #ifdef DEBUG
-      Serial.println("WARN: Client does not accept gzip encoding.");
+      Serial.println(F("WARN: Client does not accept gzip encoding."));
       #endif
       httpServer.send(200, "text/html", ENCODING_ERROR);
       return;
@@ -208,7 +256,7 @@ void sendCompressedHTML(const uint8_t* compressedHTML, size_t stringLength)
   }else{
     // Return error
     #ifdef DEBUG
-    Serial.println("WARN: Client did not send an 'Accept-Encoding' header.");
+    Serial.println(F("WARN: Client did not send an 'Accept-Encoding' header."));
     #endif
     httpServer.send(200, "text/html", ENCODING_ERROR);
     return;
@@ -227,15 +275,29 @@ void sendCompressedHTML(const uint8_t* compressedHTML, size_t stringLength)
 
 void handleTankDriveController(){
   #ifdef DEBUG
-  Serial.println("HTTP '/tankDrive' Request recieved.");
+  Serial.println(F("HTTP '/tankDrive' Request recieved."));
   #endif
   sendCompressedHTML(TANK_DRIVE_CONTROLLER_HTML, TANK_DRIVE_CONTROLLER_HTML_SIZE);
 }
 void handleSpinnerController(){
   #ifdef DEBUG
-  Serial.println("HTTP '/spinner' Request recieved.");
+  Serial.println(F("HTTP '/spinner' Request recieved."));
   #endif
   sendCompressedHTML(SPINNAH_CONTROLLER_HTML, SPINNAH_CONTROLLER_HTML_SIZE);
+}
+void handleManagement(){
+  #ifdef DEBUG
+  Serial.println(F("HTTP '/mgnt' Request recieved."));
+  #endif
+  //sendCompressedHTML(MANAGEMENT_PAGE_HTML, MANAGEMENT_PAGE_HTML_SIZE);
+}
+void handleInfo(){
+  // Returns configured settings
+  #ifdef DEBUG
+  Serial.println(F("HTTP '/info' Request recieved."));
+  #endif
+  // Perhaps this should be allowed to set infos
+  //configManager.writeToWifiClient(httpServer.client());
 }
 
 /// WEBSOCKET METHODS:
