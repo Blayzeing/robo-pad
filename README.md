@@ -6,7 +6,7 @@ This contains folders for hardware development, HTML UI development and precompi
 
 ## What is RoboPad?
 
-![A V2 RoboPad board](/documentation/images/roboPad-v2.jpg)
+![A V2 RoboPad board](/documentation/images/roboPad-v2-image.jpg)
 ![A V1 RoboPad board in-place in a combat robot](/documentation/images/roboPad-in-blanksy.jpg)
 
 "RoboPad" is the collective name for the RoboPad firmware and the Robo66 hardware, which when working together form a simple-to-use and cheap remote control system for combat robotics.
